@@ -4,11 +4,12 @@ using UnityEngine.EventSystems;
 
 namespace UnityEngine.UI
 {
-    [AddComponentMenu("UI/Scroll Rect", 37)]
+    [AddComponentMenu("UI (Canvas)/Scroll Rect", 37)]
     [SelectionBase]
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(RectTransform))]
+    [UGUIHelpURL("ScrollRect")]
     /// <summary>
     /// A component for making a child RectTransform scroll.
     /// </summary>
@@ -415,7 +416,7 @@ namespace UnityEngine.UI
         private ScrollRectEvent m_OnValueChanged = new ScrollRectEvent();
 
         /// <summary>
-        /// Callback executed when the position of the child changes.
+        /// Callback executed when the position of the child changes. Provides the normalized position as a Vector2.
         /// </summary>
         /// <remarks>
         /// onValueChanged is used to watch for changes in the ScrollRect object.
@@ -1051,8 +1052,8 @@ namespace UnityEngine.UI
             }
         }
 
-        private void SetHorizontalNormalizedPosition(float value) { SetNormalizedPosition(value, 0); }
-        private void SetVerticalNormalizedPosition(float value) { SetNormalizedPosition(value, 1); }
+        private void SetHorizontalNormalizedPosition(float value) { if(horizontalNormalizedPosition != value) SetNormalizedPosition(value, 0); }
+        private void SetVerticalNormalizedPosition(float value) { if(verticalNormalizedPosition != value) SetNormalizedPosition(value, 1); }
 
         /// <summary>
         /// >Set the horizontal or vertical scroll position as a value between 0 and 1, with 0 being at the left or at the bottom.

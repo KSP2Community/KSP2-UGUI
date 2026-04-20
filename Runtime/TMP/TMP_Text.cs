@@ -18,7 +18,11 @@ namespace TMPro
         Material sharedMaterial { get; }
 
         void Rebuild(CanvasUpdate update);
+
+        [Obsolete("GetInstanceID() is obsolete, use GetEntityId() instead.", true)]
         int GetInstanceID();
+
+        EntityId GetEntityId();
     }
 
     public enum TextAlignmentOptions
@@ -172,20 +176,8 @@ namespace TMPro
         /// </summary>
         public TMP_FontAsset font
         {
-            // Intercept font loading here
-            get
-            {
-                return m_fontAsset;
-            }
-            set
-            {
-                if (m_fontAsset == value) return;
-                m_fontAsset = value;
-                LoadFontAsset();
-                m_havePropertiesChanged = true;
-                SetVerticesDirty();
-                SetLayoutDirty();
-            }
+            get { return m_fontAsset; }
+            set { if (m_fontAsset == value) return; m_fontAsset = value; LoadFontAsset(); m_havePropertiesChanged = true; SetVerticesDirty(); SetLayoutDirty(); }
         }
         [SerializeField]
         protected TMP_FontAsset m_fontAsset;
@@ -205,7 +197,7 @@ namespace TMPro
         protected Material m_sharedMaterial;
         protected Material m_currentMaterial;
         protected static MaterialReference[] m_materialReferences = new MaterialReference[4];
-        protected static Dictionary<int, int> m_materialReferenceIndexLookup = new Dictionary<int, int>();
+        protected static Dictionary<EntityId, int> m_materialReferenceIndexLookup = new Dictionary<EntityId, int>();
 
         protected static TMP_TextProcessingStack<MaterialReference> m_materialReferenceStack = new TMP_TextProcessingStack<MaterialReference>(new MaterialReference[16]);
         protected int m_currentMaterialIndex;
@@ -234,7 +226,7 @@ namespace TMPro
             // Assign new font material
             set
             {
-                if (m_sharedMaterial != null && m_sharedMaterial.GetInstanceID() == value.GetInstanceID()) return;
+                if (m_sharedMaterial != null && m_sharedMaterial.GetEntityId() == value.GetEntityId()) return;
 
                 m_sharedMaterial = value;
 
@@ -777,16 +769,11 @@ namespace TMPro
                 m_havePropertiesChanged = true; m_TextWrappingMode = mode; SetVerticesDirty(); SetLayoutDirty();
             }
         }
-        [SerializeField]
+        [SerializeField] [FormerlySerializedAs("m_enableWordWrapping")]
         protected TextWrappingModes m_TextWrappingMode;
-
-        [SerializeField]
-        protected bool m_enableWordWrapping = false;
         protected bool m_isCharacterWrappingEnabled = false;
         protected bool m_isNonBreakingSpace = false;
         protected bool m_isIgnoringAlignment;
-
-        public bool forceNoWrapping = false;
 
         /// <summary>
         /// Controls the blending between using character and word spacing to fill-in the space for justified text.
@@ -1381,14 +1368,29 @@ namespace TMPro
         // *** Unity Event Handling ***
 
         /// <summary>
-        /// Event delegate to allow custom loading of TMP_FontAsset when using the <font="Font Asset Name"> tag.
+        /// Event delegate to allow custom loading of font assets and resources required to display the requested character.
+        /// </summary>
+        public static event Func<uint, TMP_Text, TMP_FontAsset> OnCharacterRequest;
+
+        /// <summary>
+        /// Event delegate to allow custom loading of TMP_FontAsset when using the &lt;font="Font Asset Name"&gt; tag.
         /// </summary>
         public static event Func<int, string, TMP_FontAsset> OnFontAssetRequest;
 
         /// <summary>
-        /// Event delegate to allow custom loading of TMP_SpriteAsset when using the <sprite="Sprite Asset Name"> tag.
+        /// Event delegate to allow custom loading of Material when using the &lt;font="Font Asset Name" material="Material Name"&gt; tag.
+        /// </summary>
+        public static event Func<int, string, Material> OnFontMaterialRequest;
+
+        /// <summary>
+        /// Event delegate to allow custom loading of TMP_SpriteAsset when using the &lt;sprite="Sprite Asset Name"&gt; tag.
         /// </summary>
         public static event Func<int, string, TMP_SpriteAsset> OnSpriteAssetRequest;
+
+        /// <summary>
+        /// Event delegate to allow custom loading of TMP_ColorGradient when using the &lt;gradient="Gradient Name"&gt; tag.
+        /// </summary>
+        public static event Func<int, string, TMP_ColorGradient> OnColorGradientAssetRequest;
 
         /// <summary>
         /// Delegate for the OnMissingCharacter event called when the requested Unicode character is missing from the font asset.
@@ -2214,6 +2216,7 @@ namespace TMPro
                 InsertOpeningStyleTag(m_TextStyle, ref m_TextProcessingArray, ref writeIndex);
 
             tag_NoParsing = false;
+            bool wasAnchorElementStyleApplied = false;
 
             int readIndex = 0;
             for (; readIndex < srcLength; readIndex++)
@@ -2354,8 +2357,12 @@ namespace TMPro
                             continue;
                         case MarkupTag.A:
                             // Additional check
-                            if (m_TextBackingArray.Count > readIndex + 4 && m_TextBackingArray[readIndex + 3] == 'h' && m_TextBackingArray[readIndex + 4] == 'r')
+                            if (m_TextBackingArray.Count > readIndex + 4 && m_TextBackingArray[readIndex + 3] == 'h' &&
+                                m_TextBackingArray[readIndex + 4] == 'r')
+                            {
                                 InsertOpeningTextStyle(GetStyle((int)MarkupTag.A), ref m_TextProcessingArray, ref writeIndex);
+                                wasAnchorElementStyleApplied = true;
+                            }
                             break;
                         case MarkupTag.STYLE:
                             if (tag_NoParsing) break;
@@ -2375,7 +2382,11 @@ namespace TMPro
                             }
                             break;
                         case MarkupTag.SLASH_A:
-                            InsertClosingTextStyle(GetStyle((int)MarkupTag.A), ref m_TextProcessingArray, ref writeIndex);
+                            if (wasAnchorElementStyleApplied)
+                            {
+                                InsertClosingTextStyle(GetStyle((int)MarkupTag.A), ref m_TextProcessingArray, ref writeIndex);
+                                wasAnchorElementStyleApplied = false;
+                            }
                             break;
                         case MarkupTag.SLASH_STYLE:
                             if (tag_NoParsing) break;
@@ -3708,7 +3719,7 @@ namespace TMPro
 
             m_isPreferredWidthDirty = false;
 
-            //Debug.Log("GetPreferredWidth() called on Object ID: " + GetInstanceID() + " on frame: " + Time.frameCount + ". Returning width of " + preferredWidth);
+            //Debug.Log("GetPreferredWidth() called on Object ID: " + GetEntityId() + " on frame: " + Time.frameCount + ". Returning width of " + preferredWidth);
 
             return preferredWidth;
         }
@@ -3791,7 +3802,7 @@ namespace TMPro
 
             m_isPreferredHeightDirty = false;
 
-            //Debug.Log("GetPreferredHeight() called on Object ID: " + GetInstanceID() + " on frame: " + Time.frameCount +". Returning height of " + preferredHeight);
+            //Debug.Log("GetPreferredHeight() called on Object ID: " + GetEntityId() + " on frame: " + Time.frameCount +". Returning height of " + preferredHeight);
 
             return preferredHeight;
         }
@@ -3899,7 +3910,7 @@ namespace TMPro
             // Early exit if no font asset was assigned. This should not be needed since LiberationSans SDF will be assigned by default.
             if (m_fontAsset == null || m_fontAsset.characterLookupTable == null)
             {
-                Debug.LogWarning("Can't Generate Mesh! No Font Asset has been assigned to Object ID: " + this.GetInstanceID());
+                Debug.LogWarning("Can't Generate Mesh! No Font Asset has been assigned to Object ID: " + this.GetEntityId());
 
                 m_IsAutoSizePointSizeSet = true;
                 return Vector2.zero;
@@ -6170,7 +6181,7 @@ namespace TMPro
             }
 
             // Search for the character in the primary font asset if not the current font asset
-            if (fontAsset.instanceID != m_fontAsset.instanceID)
+            if (fontAsset.entityId != m_fontAsset.entityId)
             {
                 // Search primary font asset
                 character = TMP_FontAssetUtilities.GetCharacterFromFontAsset(unicode, m_fontAsset, false, fontStyle, fontWeight, out isUsingAlternativeTypeface);
@@ -6277,6 +6288,21 @@ namespace TMPro
                     return spriteCharacter;
             }
 
+            // Callback to allow loading font assets and resources based on requested character.
+            TMP_FontAsset tempFontAsset = OnCharacterRequest?.Invoke(unicode, this);
+            if (tempFontAsset != null)
+            {
+                character = TMP_FontAssetUtilities.GetCharacterFromFontAsset(unicode, tempFontAsset, true, fontStyle, fontWeight, out isUsingAlternativeTypeface);
+
+                if (character != null)
+                {
+                    // Add character to font asset lookup cache
+                    fontAsset.AddCharacterToLookupCache(unicode, character, fontStyle, fontWeight, isUsingAlternativeTypeface);
+
+                    return character;
+                }
+            }
+
             return null;
         }
 
@@ -6340,7 +6366,7 @@ namespace TMPro
                     return true;
             }
 
-            if (this.GetInstanceID() == targetTextComponent.GetInstanceID())
+            if (this.GetEntityId() == targetTextComponent.GetEntityId())
                 return true;
 
             return false;
@@ -6810,12 +6836,62 @@ namespace TMPro
             return value;
         }
 
-        void ClearMarkupTagAttributes()
+
+        private bool TryLoadAsset<TAsset>(int assetHashCode, string assetName, string defaultResourcePath, Func<int, string, TAsset> assetRequest, out TAsset asset)
+            where TAsset : UnityEngine.Object
         {
-            int length = m_xmlAttribute.Length;
-            for (int i = 0; i < length; i++)
-                m_xmlAttribute[i] = new RichTextTagAttribute();
+            // Check for anyone registered to this callback
+            asset = assetRequest?.Invoke(assetHashCode, assetName);
+
+            if (asset == null)
+            {
+                // Load resource
+                asset = Resources.Load<TAsset>(defaultResourcePath + assetName);
+                return asset != null;
+            }
+
+            return true;
         }
+
+        void SetCurrentFontMaterialFromAttributes (RichTextTagAttribute[] attributes)
+        {
+            // Assign default material
+            m_currentMaterial = m_currentFontAsset.material;
+
+            for (int i = 1; i < attributes.Length; i++)
+            {
+                ref readonly RichTextTagAttribute attribute = ref attributes[i];
+
+                // Early-continue: skip everything except the material attribute
+                if (attribute.nameHashCode != (int)MarkupTag.MATERIAL)
+                    continue;
+
+                int materialHashCode = attribute.valueHashCode;
+
+                // Check for potential cached reference to this material
+                if (MaterialReferenceManager.TryGetMaterial(materialHashCode, out Material tempMaterial))
+                {
+                    m_currentMaterial = tempMaterial;
+                    break;
+                }
+
+                // Try loading requested material from potential delegate or resources.
+                string materialName = new string(m_htmlTag, attribute.valueStartIndex, attribute.valueLength);
+
+                // Try loading requested material from potential delegate or resources.
+                if (!TryLoadAsset(materialHashCode, materialName, TMP_Settings.defaultFontAssetPath, OnFontMaterialRequest, out tempMaterial))
+                    break;
+
+                // Add new reference to this material in the MaterialReferenceManager
+                MaterialReferenceManager.AddFontMaterial(materialHashCode, tempMaterial);
+                m_currentMaterial = tempMaterial;
+                break;
+            }
+
+            m_currentMaterialIndex = MaterialReference.AddMaterialReference(m_currentMaterial, m_currentFontAsset, ref m_materialReferences, m_materialReferenceIndexLookup);
+            m_materialReferenceStack.Add(m_materialReferences[m_currentMaterialIndex]);
+        }
+
 
         /// <summary>
         /// Function to identify and validate the rich tag. Returns the position of the > if the tag was valid.
@@ -6829,10 +6905,15 @@ namespace TMPro
             int tagCharCount = 0;
             byte attributeFlag = 0;
 
-            int attributeIndex = 0;
-            ClearMarkupTagAttributes();
+            // Reset the first element of the array
+            m_xmlAttribute[0] = RichTextTagAttribute.Default;
+
             TagValueType tagValueType = TagValueType.None;
             TagUnitType tagUnitType = TagUnitType.Pixels;
+
+            // Cache reference to markupAttribute
+            int attributeIndex = 0;
+            ref RichTextTagAttribute markupAttribute = ref m_xmlAttribute[attributeIndex];
 
             endIndex = startIndex;
             bool isTagSet = false;
@@ -6861,30 +6942,30 @@ namespace TMPro
                         if (unicode == '+' || unicode == '-' || unicode == '.' || (unicode >= '0' && unicode <= '9'))
                         {
                             tagUnitType = TagUnitType.Pixels;
-                            tagValueType = m_xmlAttribute[attributeIndex].valueType = TagValueType.NumericalValue;
-                            m_xmlAttribute[attributeIndex].valueStartIndex = tagCharCount - 1;
-                            m_xmlAttribute[attributeIndex].valueLength += 1;
+                            tagValueType = markupAttribute.valueType = TagValueType.NumericalValue;
+                            markupAttribute.valueStartIndex = tagCharCount - 1;
+                            markupAttribute.valueLength += 1;
                         }
                         else if (unicode == '#')
                         {
                             tagUnitType = TagUnitType.Pixels;
-                            tagValueType = m_xmlAttribute[attributeIndex].valueType = TagValueType.ColorValue;
-                            m_xmlAttribute[attributeIndex].valueStartIndex = tagCharCount - 1;
-                            m_xmlAttribute[attributeIndex].valueLength += 1;
+                            tagValueType = markupAttribute.valueType = TagValueType.ColorValue;
+                            markupAttribute.valueStartIndex = tagCharCount - 1;
+                            markupAttribute.valueLength += 1;
                         }
                         else if (unicode == '"')
                         {
                             tagUnitType = TagUnitType.Pixels;
-                            tagValueType = m_xmlAttribute[attributeIndex].valueType = TagValueType.StringValue;
-                            m_xmlAttribute[attributeIndex].valueStartIndex = tagCharCount;
+                            tagValueType = markupAttribute.valueType = TagValueType.StringValue;
+                            markupAttribute.valueStartIndex = tagCharCount;
                         }
                         else
                         {
                             tagUnitType = TagUnitType.Pixels;
-                            tagValueType = m_xmlAttribute[attributeIndex].valueType = TagValueType.StringValue;
-                            m_xmlAttribute[attributeIndex].valueStartIndex = tagCharCount - 1;
-                            m_xmlAttribute[attributeIndex].valueHashCode = (m_xmlAttribute[attributeIndex].valueHashCode << 5) + m_xmlAttribute[attributeIndex].valueHashCode ^ TMP_TextUtilities.ToUpperFast((char)unicode);
-                            m_xmlAttribute[attributeIndex].valueLength += 1;
+                            tagValueType = markupAttribute.valueType = TagValueType.StringValue;
+                            markupAttribute.valueStartIndex = tagCharCount - 1;
+                            markupAttribute.valueHashCode = (markupAttribute.valueHashCode << 5) + markupAttribute.valueHashCode ^ TMP_TextUtilities.ToUpperFast((char)unicode);
+                            markupAttribute.valueLength += 1;
                         }
                     }
                     else
@@ -6900,48 +6981,40 @@ namespace TMPro
                                 switch (unicode)
                                 {
                                     case 'e':
-                                        m_xmlAttribute[attributeIndex].unitType = tagUnitType = TagUnitType.FontUnits;
+                                        markupAttribute.unitType = tagUnitType = TagUnitType.FontUnits;
                                         break;
                                     case '%':
-                                        m_xmlAttribute[attributeIndex].unitType = tagUnitType = TagUnitType.Percentage;
+                                        markupAttribute.unitType = tagUnitType = TagUnitType.Percentage;
                                         break;
                                     default:
-                                        m_xmlAttribute[attributeIndex].unitType = tagUnitType = TagUnitType.Pixels;
+                                        markupAttribute.unitType = tagUnitType = TagUnitType.Pixels;
                                         break;
                                 }
 
                                 attributeIndex += 1;
-                                m_xmlAttribute[attributeIndex].nameHashCode = 0;
-                                m_xmlAttribute[attributeIndex].valueHashCode = 0;
-                                m_xmlAttribute[attributeIndex].valueType = TagValueType.None;
-                                m_xmlAttribute[attributeIndex].unitType = TagUnitType.Pixels;
-                                m_xmlAttribute[attributeIndex].valueStartIndex = 0;
-                                m_xmlAttribute[attributeIndex].valueLength = 0;
-
+                                markupAttribute = ref m_xmlAttribute[attributeIndex];
+                                markupAttribute = RichTextTagAttribute.Default;
                             }
                             else
                             {
-                                m_xmlAttribute[attributeIndex].valueLength += 1;
+                                markupAttribute.valueLength += 1;
                             }
                         }
                         else if (tagValueType == TagValueType.ColorValue)
                         {
                             if (unicode != ' ')
                             {
-                                m_xmlAttribute[attributeIndex].valueLength += 1;
+                                markupAttribute.valueLength += 1;
                             }
                             else
                             {
                                 attributeFlag = 2;
                                 tagValueType = TagValueType.None;
                                 tagUnitType = TagUnitType.Pixels;
+
                                 attributeIndex += 1;
-                                m_xmlAttribute[attributeIndex].nameHashCode = 0;
-                                m_xmlAttribute[attributeIndex].valueType = TagValueType.None;
-                                m_xmlAttribute[attributeIndex].unitType = TagUnitType.Pixels;
-                                m_xmlAttribute[attributeIndex].valueHashCode = 0;
-                                m_xmlAttribute[attributeIndex].valueStartIndex = 0;
-                                m_xmlAttribute[attributeIndex].valueLength = 0;
+                                markupAttribute = ref m_xmlAttribute[attributeIndex];
+                                markupAttribute = RichTextTagAttribute.Default;
                             }
                         }
                         else if (tagValueType == TagValueType.StringValue)
@@ -6949,28 +7022,24 @@ namespace TMPro
                             // Compute HashCode value for the named tag.
                             if (unicode != '"')
                             {
-                                m_xmlAttribute[attributeIndex].valueHashCode = (m_xmlAttribute[attributeIndex].valueHashCode << 5) + m_xmlAttribute[attributeIndex].valueHashCode ^ TMP_TextUtilities.ToUpperFast((char)unicode);
-                                m_xmlAttribute[attributeIndex].valueLength += 1;
+                                markupAttribute.valueHashCode = (markupAttribute.valueHashCode << 5) + markupAttribute.valueHashCode ^ TMP_TextUtilities.ToUpperFast((char)unicode);
+                                markupAttribute.valueLength += 1;
                             }
                             else
                             {
                                 attributeFlag = 2;
                                 tagValueType = TagValueType.None;
                                 tagUnitType = TagUnitType.Pixels;
+
                                 attributeIndex += 1;
-                                m_xmlAttribute[attributeIndex].nameHashCode = 0;
-                                m_xmlAttribute[attributeIndex].valueType = TagValueType.None;
-                                m_xmlAttribute[attributeIndex].unitType = TagUnitType.Pixels;
-                                m_xmlAttribute[attributeIndex].valueHashCode = 0;
-                                m_xmlAttribute[attributeIndex].valueStartIndex = 0;
-                                m_xmlAttribute[attributeIndex].valueLength = 0;
+                                markupAttribute = ref m_xmlAttribute[attributeIndex];
+                                markupAttribute = RichTextTagAttribute.Default;
                             }
                         }
                     }
                 }
 
-
-                if (unicode == '=') // '='
+                if (attributeFlag == 0 && unicode == '=') // '='
                     attributeFlag = 1;
 
                 // Compute HashCode for the name of the attribute
@@ -6983,22 +7052,24 @@ namespace TMPro
 
                     tagValueType = TagValueType.None;
                     tagUnitType = TagUnitType.Pixels;
+
                     attributeIndex += 1;
-                    m_xmlAttribute[attributeIndex].nameHashCode = 0;
-                    m_xmlAttribute[attributeIndex].valueType = TagValueType.None;
-                    m_xmlAttribute[attributeIndex].unitType = TagUnitType.Pixels;
-                    m_xmlAttribute[attributeIndex].valueHashCode = 0;
-                    m_xmlAttribute[attributeIndex].valueStartIndex = 0;
-                    m_xmlAttribute[attributeIndex].valueLength = 0;
+                    markupAttribute = ref m_xmlAttribute[attributeIndex];
+                    markupAttribute = RichTextTagAttribute.Default;
                 }
 
                 if (attributeFlag == 0)
-                    m_xmlAttribute[attributeIndex].nameHashCode = (m_xmlAttribute[attributeIndex].nameHashCode << 5) + m_xmlAttribute[attributeIndex].nameHashCode ^ TMP_TextUtilities.ToUpperFast((char)unicode);
+                    markupAttribute.nameHashCode = (markupAttribute.nameHashCode << 5) + markupAttribute.nameHashCode ^ TMP_TextUtilities.ToUpperFast((char)unicode);
 
                 if (attributeFlag == 2 && unicode == ' ')
                     attributeFlag = 0;
 
             }
+
+            // Terminate markupAttribute array
+            int terminalIndex = attributeIndex + 1;
+            if (terminalIndex < m_xmlAttribute.Length)
+                m_xmlAttribute[terminalIndex] = RichTextTagAttribute.Default;
 
             if (!isValidHtmlTag)
             {
@@ -7397,95 +7468,81 @@ namespace TMPro
                         m_currentFontSize = m_sizeStack.Remove();
                         return true;
                     case MarkupTag.FONT:
+
                         int fontHashCode = m_xmlAttribute[0].valueHashCode;
-                        int materialAttributeHashCode = m_xmlAttribute[1].nameHashCode;
-                        int materialHashCode = m_xmlAttribute[1].valueHashCode;
-
-                        // Special handling for <font=default> or <font=Default>
-                        if (fontHashCode == (int)MarkupTag.DEFAULT)
-                        {
-                            m_currentFontAsset = m_materialReferences[0].fontAsset;
-                            m_currentMaterial = m_materialReferences[0].material;
-                            m_currentMaterialIndex = 0;
-                            //Debug.Log("<font=Default> assigning Font Asset [" + m_currentFontAsset.name + "] with Material [" + m_currentMaterial.name + "].");
-
-                            m_materialReferenceStack.Add(m_materialReferences[0]);
-
-                            return true;
-                        }
-
                         TMP_FontAsset tempFont;
-                        Material tempMaterial;
 
-                        // HANDLE NEW FONT ASSET
-                        //TMP_ResourceManager.TryGetFontAsset(fontHashCode, out tempFont);
-
-                        // Check if we already have a reference to this font asset.
-                        MaterialReferenceManager.TryGetFontAsset(fontHashCode, out tempFont);
-
-                        // Try loading font asset from potential delegate or resources.
-                        if (tempFont == null)
+                        // Try loading the font asset
+                        switch (fontHashCode)
                         {
-                            // Check for anyone registered to this callback
-                            tempFont = OnFontAssetRequest?.Invoke(fontHashCode, new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
+                            // <font=default> or <font=Default>
+                            case (int)MarkupTag.DEFAULT:
+                                m_currentFontAsset = m_materialReferences[0].fontAsset;
+                                m_currentMaterial = m_materialReferences[0].material;
+                                m_currentMaterialIndex = 0;
+                                m_materialReferenceStack.Add(m_materialReferences[0]);
 
-                            if (tempFont == null)
-                            {
-                                // Load Font Asset
-                                tempFont = Resources.Load<TMP_FontAsset>(TMP_Settings.defaultFontAssetPath + new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
-                            }
+                                return true;
 
-                            if (tempFont == null)
-                                return false;
+                            // <font familyName="Liberation Sans"> or <font familyName="Liberation Sans" styleName="Regular"> or <font familyName="Liberation Sans" styleName="Regular" material="Liberation Sans SDF - Outline">
+                            case 0:
+                                //
+                                if (m_xmlAttribute.Length > 1 && m_xmlAttribute[1].nameHashCode == (int)MarkupTag.FAMILYNAME)
+                                {
+                                    int familyNameHashCode = m_xmlAttribute[1].valueHashCode;
+                                    int styleNameHashCode = (int)MarkupTag.REGULAR;
 
-                            // Add new reference to the font asset as well as default material to the MaterialReferenceManager
-                            MaterialReferenceManager.AddFontAsset(tempFont);
-                        }
+                                    // Check if a style name is referenced
+                                    if (m_xmlAttribute[2].nameHashCode == (int)MarkupTag.STYLENAME)
+                                    {
+                                        styleNameHashCode = m_xmlAttribute[2].valueHashCode;
+                                    }
 
-                        // HANDLE NEW MATERIAL
-                        if (materialAttributeHashCode == 0 && materialHashCode == 0)
-                        {
-                            // No material specified then use default font asset material.
-                            m_currentMaterial = tempFont.material;
+                                    if (TMP_ResourceManager.TryGetFontAssetByFamilyName(familyNameHashCode, styleNameHashCode, out tempFont))
+                                    {
+                                        // Add new reference to the font asset as well as default material to the MaterialReferenceManager
+                                        MaterialReferenceManager.AddFontAsset(tempFont);
+                                        m_currentFontAsset = tempFont;
 
-                            m_currentMaterialIndex = MaterialReference.AddMaterialReference(m_currentMaterial, tempFont, ref m_materialReferences, m_materialReferenceIndexLookup);
+                                        // Handle potential material attribute
+                                        SetCurrentFontMaterialFromAttributes(m_xmlAttribute);
 
-                            m_materialReferenceStack.Add(m_materialReferences[m_currentMaterialIndex]);
-                        }
-                        else if (materialAttributeHashCode == (int)MarkupTag.MATERIAL) // using material attribute
-                        {
-                            if (MaterialReferenceManager.TryGetMaterial(materialHashCode, out tempMaterial))
-                            {
-                                m_currentMaterial = tempMaterial;
+                                        return true;
+                                    }
+                                }
+                                break;
 
-                                m_currentMaterialIndex = MaterialReference.AddMaterialReference(m_currentMaterial, tempFont, ref m_materialReferences, m_materialReferenceIndexLookup);
+                            // <font="Liberation Sans SDF"> or <font="Liberation Sans SDF" material="Liberation Sans SDF - Outline">
+                            default:
+                                // Check if we already have a cached reference to this font asset.
+                                if (MaterialReferenceManager.TryGetFontAsset(fontHashCode, out tempFont))
+                                {
+                                    m_currentFontAsset = tempFont;
 
-                                m_materialReferenceStack.Add(m_materialReferences[m_currentMaterialIndex]);
-                            }
-                            else
-                            {
-                                // Load new material
-                                tempMaterial = Resources.Load<Material>(TMP_Settings.defaultFontAssetPath + new string(m_htmlTag, m_xmlAttribute[1].valueStartIndex, m_xmlAttribute[1].valueLength));
+                                    // Handle potential material attribute
+                                    SetCurrentFontMaterialFromAttributes(m_xmlAttribute);
 
-                                if (tempMaterial == null)
+                                    return true;
+                                }
+
+                                // Try loading the font asset by name from potential delegate or resources.
+                                string fontName = new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex,
+                                    m_xmlAttribute[0].valueLength);
+
+                                if (!TryLoadAsset(fontHashCode, fontName, TMP_Settings.defaultFontAssetPath, OnFontAssetRequest, out tempFont))
                                     return false;
 
-                                // Add new reference to this material in the MaterialReferenceManager
-                                MaterialReferenceManager.AddFontMaterial(materialHashCode, tempMaterial);
+                                // Add new reference to the font asset as well as default material to the MaterialReferenceManager
+                                MaterialReferenceManager.AddFontAsset(tempFont);
+                                m_currentFontAsset = tempFont;
 
-                                m_currentMaterial = tempMaterial;
+                                // Handle potential material attribute
+                                SetCurrentFontMaterialFromAttributes(m_xmlAttribute);
 
-                                m_currentMaterialIndex = MaterialReference.AddMaterialReference(m_currentMaterial, tempFont, ref m_materialReferences, m_materialReferenceIndexLookup);
-
-                                m_materialReferenceStack.Add(m_materialReferences[m_currentMaterialIndex]);
-                            }
+                                return true;
                         }
-                        else
-                            return false;
+                        return false;
 
-                        m_currentFontAsset = tempFont;
-
-                        return true;
                     case MarkupTag.SLASH_FONT:
                         {
                             MaterialReference materialReference = m_materialReferenceStack.Remove();
@@ -7497,13 +7554,13 @@ namespace TMPro
                             return true;
                         }
                     case MarkupTag.MATERIAL:
-                        materialHashCode = m_xmlAttribute[0].valueHashCode;
+                        int materialHashCode = m_xmlAttribute[0].valueHashCode;
 
                         // Special handling for <material=default> or <material=Default>
                         if (materialHashCode == (int)MarkupTag.DEFAULT)
                         {
                             // Check if material font atlas texture matches that of the current font asset.
-                            //if (m_currentFontAsset.atlas.GetInstanceID() != m_currentMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetInstanceID()) return false;
+                            //if (m_currentFontAsset.atlas.GetEntityId() != m_currentMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetEntityId()) return false;
 
                             m_currentMaterial = m_materialReferences[0].material;
                             m_currentMaterialIndex = 0;
@@ -7513,12 +7570,11 @@ namespace TMPro
                             return true;
                         }
 
-
                         // Check if material
-                        if (MaterialReferenceManager.TryGetMaterial(materialHashCode, out tempMaterial))
+                        if (MaterialReferenceManager.TryGetMaterial(materialHashCode, out Material tempMaterial))
                         {
                             // Check if material font atlas texture matches that of the current font asset.
-                            //if (m_currentFontAsset.atlas.GetInstanceID() != tempMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetInstanceID()) return false;
+                            //if (m_currentFontAsset.atlas.GetEntityId() != tempMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetEntityId()) return false;
 
                             m_currentMaterial = tempMaterial;
 
@@ -7528,14 +7584,15 @@ namespace TMPro
                         }
                         else
                         {
-                            // Load new material
-                            tempMaterial = Resources.Load<Material>(TMP_Settings.defaultFontAssetPath + new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
+                            // Name of requested material
+                            string materialName = new string(m_htmlTag, m_xmlAttribute[1].valueStartIndex, m_xmlAttribute[1].valueLength);
 
-                            if (tempMaterial == null)
+                            // Try loading requested material from potential delegate or resources.
+                            if (!TryLoadAsset(materialHashCode, materialName, TMP_Settings.defaultFontAssetPath, OnFontMaterialRequest, out tempMaterial))
                                 return false;
 
                             // Check if material font atlas texture matches that of the current font asset.
-                            //if (m_currentFontAsset.atlas.GetInstanceID() != tempMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetInstanceID()) return false;
+                            //if (m_currentFontAsset.atlas.GetEntityId() != tempMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetEntityId()) return false;
 
                             // Add new reference to this material in the MaterialReferenceManager
                             MaterialReferenceManager.AddFontMaterial(materialHashCode, tempMaterial);
@@ -7549,7 +7606,7 @@ namespace TMPro
                         return true;
                     case MarkupTag.SLASH_MATERIAL:
                         {
-                            //if (m_currentMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetInstanceID() != m_materialReferenceStack.PreviousItem().material.GetTexture(ShaderUtilities.ID_MainTex).GetInstanceID())
+                            //if (m_currentMaterial.GetTexture(ShaderUtilities.ID_MainTex).GetEntityId() != m_materialReferenceStack.PreviousItem().material.GetTexture(ShaderUtilities.ID_MainTex).GetEntityId())
                             //    return false;
 
                             MaterialReference materialReference = m_materialReferenceStack.Remove();
@@ -7607,9 +7664,12 @@ namespace TMPro
                         {
                             int index = m_textInfo.linkCount;
 
-                            m_textInfo.linkInfo[index].linkTextLength = m_characterCount - m_textInfo.linkInfo[index].linkTextfirstCharacterIndex;
+                            if (index < m_textInfo.linkInfo.Length)
+                            {
+                                m_textInfo.linkInfo[index].linkTextLength = m_characterCount - m_textInfo.linkInfo[index].linkTextfirstCharacterIndex;
 
-                            m_textInfo.linkCount += 1;
+                                m_textInfo.linkCount += 1;
+                            }
                         }
                         return true;
                     case MarkupTag.LINK:
@@ -7816,13 +7876,11 @@ namespace TMPro
                         }
                         else
                         {
-                            // Load Color Gradient Preset
-                            if (tempColorGradientPreset == null)
-                            {
-                                tempColorGradientPreset = Resources.Load<TMP_ColorGradient>(TMP_Settings.defaultColorGradientPresetsPath + new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
-                            }
+                            // Name of requested color gradient asset
+                            string gradientName = new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength);
 
-                            if (tempColorGradientPreset == null)
+                            // Try loading requested color gradient asset from potential delegate or resources.
+                            if (!TryLoadAsset(gradientPresetHashCode, gradientName, TMP_Settings.defaultColorGradientPresetsPath, OnColorGradientAssetRequest, out tempColorGradientPreset))
                                 return false;
 
                             MaterialReferenceManager.AddColorGradientPreset(gradientPresetHashCode, tempColorGradientPreset);
@@ -8006,17 +8064,11 @@ namespace TMPro
                             }
                             else
                             {
-                                // Load Sprite Asset
-                                if (tempSpriteAsset == null)
-                                {
-                                    //
-                                    tempSpriteAsset = OnSpriteAssetRequest?.Invoke(spriteAssetHashCode, new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
+                                // Name of request sprite asset
+                                string spriteName = new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength);
 
-                                    if (tempSpriteAsset == null)
-                                        tempSpriteAsset = Resources.Load<TMP_SpriteAsset>(TMP_Settings.defaultSpriteAssetPath + new string(m_htmlTag, m_xmlAttribute[0].valueStartIndex, m_xmlAttribute[0].valueLength));
-                                }
-
-                                if (tempSpriteAsset == null)
+                                // Try loading requested sprite asset from potential delegate or resources.
+                                if (!TryLoadAsset(spriteAssetHashCode, spriteName, TMP_Settings.defaultSpriteAssetPath, OnSpriteAssetRequest, out tempSpriteAsset))
                                     return false;
 
                                 //Debug.Log("Loading & assigning new Sprite Asset: " + tempSpriteAsset.name);

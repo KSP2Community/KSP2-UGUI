@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 using UnityEditor.Presets;
 using UnityEditor.SceneManagement;
@@ -77,7 +77,7 @@ namespace TMPro.EditorUtilities
         /// Create a TextMeshPro object that works with the CanvasRenderer
         /// </summary>
         /// <param name="command"></param>
-        [MenuItem("GameObject/UI/Text - TextMeshPro", false, 2001)]
+        [MenuItem("GameObject/UI (Canvas)/Text - TextMeshPro", false, 2001)]
         static void CreateTextMeshProGuiObjectPerform(MenuCommand menuCommand)
         {
             GameObject go = TMP_DefaultControls.CreateText(GetStandardResources());
@@ -117,7 +117,7 @@ namespace TMPro.EditorUtilities
             PlaceUIElementRoot(go, menuCommand);
         }
 
-        [MenuItem("GameObject/UI/Button - TextMeshPro", false, 2031)]
+        [MenuItem("GameObject/UI (Canvas)/Button - TextMeshPro", false, 2031)]
         public static void AddButton(MenuCommand menuCommand)
         {
             GameObject go = TMP_DefaultControls.CreateButton(GetStandardResources());
@@ -130,7 +130,7 @@ namespace TMPro.EditorUtilities
         }
 
 
-        [MenuItem("GameObject/UI/Input Field - TextMeshPro", false, 2037)]
+        [MenuItem("GameObject/UI (Canvas)/Input Field - TextMeshPro", false, 2037)]
         static void AddTextMeshProInputField(MenuCommand menuCommand)
         {
             GameObject go = TMP_DefaultControls.CreateInputField(GetStandardResources());
@@ -138,7 +138,7 @@ namespace TMPro.EditorUtilities
         }
 
 
-        [MenuItem("GameObject/UI/Dropdown - TextMeshPro", false, 2036)]
+        [MenuItem("GameObject/UI (Canvas)/Dropdown - TextMeshPro", false, 2036)]
         public static void AddDropdown(MenuCommand menuCommand)
         {
             GameObject go = TMP_DefaultControls.CreateDropdown(GetStandardResources());
@@ -175,62 +175,12 @@ namespace TMPro.EditorUtilities
         }
 
 
-        private static void SetPositionVisibleinSceneView(RectTransform canvasRTransform, RectTransform itemTransform)
-        {
-            // Find the best scene view
-            SceneView sceneView = SceneView.lastActiveSceneView;
-
-            if (sceneView == null && SceneView.sceneViews.Count > 0)
-                sceneView = SceneView.sceneViews[0] as SceneView;
-
-            // Couldn't find a SceneView. Don't set position.
-            if (sceneView == null || sceneView.camera == null)
-                return;
-
-            // Create world space Plane from canvas position.
-            Camera camera = sceneView.camera;
-            Vector3 position = Vector3.zero;
-            Vector2 localPlanePosition;
-
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRTransform, new Vector2(camera.pixelWidth / 2, camera.pixelHeight / 2), camera, out localPlanePosition))
-            {
-                // Adjust for canvas pivot
-                localPlanePosition.x = localPlanePosition.x + canvasRTransform.sizeDelta.x * canvasRTransform.pivot.x;
-                localPlanePosition.y = localPlanePosition.y + canvasRTransform.sizeDelta.y * canvasRTransform.pivot.y;
-
-                localPlanePosition.x = Mathf.Clamp(localPlanePosition.x, 0, canvasRTransform.sizeDelta.x);
-                localPlanePosition.y = Mathf.Clamp(localPlanePosition.y, 0, canvasRTransform.sizeDelta.y);
-
-                // Adjust for anchoring
-                position.x = localPlanePosition.x - canvasRTransform.sizeDelta.x * itemTransform.anchorMin.x;
-                position.y = localPlanePosition.y - canvasRTransform.sizeDelta.y * itemTransform.anchorMin.y;
-
-                Vector3 minLocalPosition;
-                minLocalPosition.x = canvasRTransform.sizeDelta.x * (0 - canvasRTransform.pivot.x) + itemTransform.sizeDelta.x * itemTransform.pivot.x;
-                minLocalPosition.y = canvasRTransform.sizeDelta.y * (0 - canvasRTransform.pivot.y) + itemTransform.sizeDelta.y * itemTransform.pivot.y;
-
-                Vector3 maxLocalPosition;
-                maxLocalPosition.x = canvasRTransform.sizeDelta.x * (1 - canvasRTransform.pivot.x) - itemTransform.sizeDelta.x * itemTransform.pivot.x;
-                maxLocalPosition.y = canvasRTransform.sizeDelta.y * (1 - canvasRTransform.pivot.y) - itemTransform.sizeDelta.y * itemTransform.pivot.y;
-
-                position.x = Mathf.Clamp(position.x, minLocalPosition.x, maxLocalPosition.x);
-                position.y = Mathf.Clamp(position.y, minLocalPosition.y, maxLocalPosition.y);
-            }
-
-            itemTransform.anchoredPosition = position;
-            itemTransform.localRotation = Quaternion.identity;
-            itemTransform.localScale = Vector3.one;
-        }
-
-
         private static void PlaceUIElementRoot(GameObject element, MenuCommand menuCommand)
         {
             GameObject parent = menuCommand.context as GameObject;
-            bool explicitParentChoice = true;
             if (parent == null)
             {
                 parent = GetOrCreateCanvasGameObject();
-                explicitParentChoice = false;
 
                 // If in Prefab Mode, Canvas has to be part of Prefab contents,
                 // otherwise use Prefab root instead.
@@ -251,8 +201,6 @@ namespace TMPro.EditorUtilities
             GameObjectUtility.EnsureUniqueNameForSibling(element);
 
             SetParentAndAlign(element, parent);
-            if (!explicitParentChoice) // not a context click, so center in sceneview
-                SetPositionVisibleinSceneView(parent.GetComponent<RectTransform>(), element.GetComponent<RectTransform>());
 
             // This call ensure any change made to created Objects after they where registered will be part of the Undo.
             Undo.RegisterFullObjectHierarchyUndo(parent == null ? element : parent, "");
@@ -337,7 +285,7 @@ namespace TMPro.EditorUtilities
 
         private static void CreateEventSystem(bool select, GameObject parent)
         {
-            var esys = Object.FindFirstObjectByType<EventSystem>();
+            var esys = Object.FindAnyObjectByType<EventSystem>();
             if (esys == null)
             {
                 var eventSystem = ObjectFactory.CreateGameObject("EventSystem");

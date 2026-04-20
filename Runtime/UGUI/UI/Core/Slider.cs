@@ -8,9 +8,10 @@ using UnityEditor;
 
 namespace UnityEngine.UI
 {
-    [AddComponentMenu("UI/Slider", 34)]
+    [AddComponentMenu("UI (Canvas)/Slider", 34)]
     [ExecuteAlways]
     [RequireComponent(typeof(RectTransform))]
+    [UGUIHelpURL("Slider")]
     /// <summary>
     /// A standard slider that can be moved between a minimum and maximum value.
     /// </summary>

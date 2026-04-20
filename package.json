@@ -1,8 +1,8 @@
 {
   "name": "com.unity.ugui",
-  "displayName": "Unity UI",
-  "version": "2.0.0",
-  "unity": "2019.2",
+  "displayName": "uGUI",
+  "version": "2.5.0",
+  "unity": "6000.5",
   "keywords": [
     "UI",
     "ugui",
@@ -14,10 +14,13 @@
     "TMP",
     "SDF"
   ],
-  "description": "Unity UI is a set of tools for developing user interfaces for games and applications. It is a GameObject-based UI system that uses Components and the Game View to arrange, position, and style user interfaces. ​ You cannot use Unity UI to create or change user interfaces in the Unity Editor.",
+  "description": "uGUI (Unity UI) is a set of tools for developing user interfaces for games and applications. It is a GameObject-based UI system that uses Components and the Game View to arrange, position, and style user interfaces. ​ You cannot use Unity UI to create or change user interfaces in the Unity Editor.",
   "dependencies": {
     "com.unity.modules.ui": "1.0.0",
-    "com.unity.modules.imgui": "1.0.0"
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.physics2d": "1.0.0",
+    "com.unity.modules.physics": "1.0.0"
   },
-  "_fingerprint": "52e65280e89ee09a5b287dc793f9464bcd213b41"
+  "_fingerprint": "fb409ffddf529e605c494672b97789462652bca5"
 }

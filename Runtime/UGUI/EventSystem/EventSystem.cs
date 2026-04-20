@@ -10,6 +10,7 @@ namespace UnityEngine.EventSystems
 {
     [AddComponentMenu("Event/Event System")]
     [DisallowMultipleComponent]
+    [UGUIHelpURL("EventSystem")]
     /// <summary>
     /// Handles input, raycasting, and sending events.
     /// </summary>
@@ -327,7 +328,7 @@ namespace UnityEngine.EventSystems
         // This code is disabled unless the com.unity.modules.uielements module is present.
         // The UIElements module is always present in the Editor but it can be stripped from a project build if unused.
 #if PACKAGE_UITOOLKIT
-        [SerializeField, HideInInspector] private UIToolkitInteroperabilityBridge m_UIToolkitInterop = new ();
+        private UIToolkitInteroperabilityBridge m_UIToolkitInterop = new ();
 
         /// <summary>
         /// Use this property to initialize UI Toolkit interoperability with uGUI events.
@@ -344,7 +345,7 @@ namespace UnityEngine.EventSystems
             get
             {
 #if PACKAGE_UITOOLKIT
-                return uiToolkitInterop.overrideUIToolkitEvents && UIDocument.EnabledDocumentCount > 0;
+                return uiToolkitInterop.overrideUIToolkitEvents && IRuntimePanel.uIElementsRuntimeUtility != null && IRuntimePanel.uIElementsRuntimeUtility.HasActiveDocuments();
 #else
                 return false;
 #endif
@@ -363,7 +364,7 @@ namespace UnityEngine.EventSystems
 
         /// <summary>
         /// Sets how UI Toolkit runtime panels receive events and handle selection
-        /// when interacting with other objects that use the EventSystem, such as components from the Unity UI package.
+        /// when interacting with other objects that use the EventSystem, such as components from the uGUI (Unity UI) package.
         /// </summary>
         /// <remarks>
         /// This method is obsolete. Use the PanelInputConfiguration component instead.
@@ -393,9 +394,10 @@ namespace UnityEngine.EventSystems
             };
 
             var eventSystem = activeEventSystem != null ? activeEventSystem : EventSystem.current;
-            if (UIElementsRuntimeUtility.activeEventSystem != null && UIElementsRuntimeUtility.activeEventSystem != eventSystem)
+            // Can be null if runtime panels have not been created (e.g., if UI Toolkit is stripped or not in use)
+            if (IRuntimePanel.uIElementsRuntimeUtility?.activeEventSystem != null && IRuntimePanel.uIElementsRuntimeUtility.activeEventSystem != eventSystem)
             {
-                ((EventSystem)UIElementsRuntimeUtility.activeEventSystem).uiToolkitInterop.overrideUIToolkitEvents = false;
+                ((EventSystem)IRuntimePanel.uIElementsRuntimeUtility.activeEventSystem).uiToolkitInterop.overrideUIToolkitEvents = false;
             }
             if (eventSystem != null && eventSystem.isActiveAndEnabled)
             {
