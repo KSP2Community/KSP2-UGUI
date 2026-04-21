@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Pool;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using Unity.Profiling;
@@ -848,15 +849,6 @@ namespace TMPro
 
         protected override void OnEnable()
         {
-            // Force text wrapping mode in all UGUI assets generally, as it seems to be the only way to fix shit
-            if (m_enableWordWrapping && !forceNoWrapping)
-            {
-                textWrappingMode = TextWrappingModes.Normal;
-                m_havePropertiesChanged = true;
-                m_isLayoutDirty = true;
-                ComputeMarginSize();
-            }
-
             //Debug.Log("***** OnEnable() called on object ID " + GetEntityId() + ". *****");
 
             // Return if Awake() has not been called on the text object.
@@ -937,9 +929,6 @@ namespace TMPro
         protected override void OnDestroy()
         {
             //Debug.Log("***** OnDestroy() called on object ID " + GetEntityId() + ". *****");
-
-            // Make sure the pending set doesn't keep a reference to this
-            UncheckedReplacements.Remove(this);
 
             // UnRegister Graphic Component
             GraphicRegistry.UnregisterGraphicForCanvas(m_canvas, this);
@@ -1226,39 +1215,13 @@ namespace TMPro
         }
         #endif
 
-        // Font replacement checks should be injected here
-        public static Func<TMP_FontAsset, (TMP_FontAsset newFont, float scale)?> ReplaceFont = null;
-        public static Action<TMP_Text> AdjustTextSize = null;
-        public static HashSet<TextMeshProUGUI> UncheckedReplacements = new();
 
-
-        // Function which loads either the default font or a newly assigned font asset. This function also assigned
-        // the appropriate material to the renderer.
+        // Function which loads either the default font or a newly assigned font asset. This function also assigned the appropriate material to the renderer.
         protected override void LoadFontAsset()
         {
-            //Debug.Log("***** LoadFontAsset() *****"); //TextMeshPro LoadFontAsset() has been called.");
-            // Current Font Asset is " + (font != null ? font.name: "Null") );
+            //Debug.Log("***** LoadFontAsset() *****"); //TextMeshPro LoadFontAsset() has been called."); // Current Font Asset is " + (font != null ? font.name: "Null") );
 
             ShaderUtilities.GetShaderPropertyIDs(); // Initialize & Get shader property IDs.
-
-            if (ReplaceFont != null)
-            {
-                // ReplaceFont(this);
-                (TMP_FontAsset newFont, float scale)? result = ReplaceFont(m_fontAsset);
-                if (result is {} newResult)
-                {
-                    m_fontAsset = newResult.newFont;
-                    fontSize *= newResult.scale;
-                    fontSizeMax *= newResult.scale;
-                    fontSizeMin *= newResult.scale;
-
-                    AdjustTextSize?.Invoke(this);
-                }
-            }
-            else
-            {
-                UncheckedReplacements.Add(this);
-            }
 
             if (m_fontAsset == null)
             {
@@ -1319,7 +1282,7 @@ namespace TMPro
         private Canvas GetCanvas()
         {
             Canvas canvas = null;
-            var list = TMP_ListPool<Canvas>.Get();
+            var list = ListPool<Canvas>.Get();
 
             gameObject.GetComponentsInParent(false, list);
             if (list.Count > 0)
@@ -1335,7 +1298,7 @@ namespace TMPro
                 }
             }
 
-            TMP_ListPool<Canvas>.Release(list);
+            ListPool<Canvas>.Release(list);
 
             return canvas;
         }
