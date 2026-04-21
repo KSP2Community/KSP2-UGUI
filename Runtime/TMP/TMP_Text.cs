@@ -769,11 +769,16 @@ namespace TMPro
                 m_havePropertiesChanged = true; m_TextWrappingMode = mode; SetVerticesDirty(); SetLayoutDirty();
             }
         }
-        [SerializeField] [FormerlySerializedAs("m_enableWordWrapping")]
+        [SerializeField]
         protected TextWrappingModes m_TextWrappingMode;
+
+        [SerializeField]
+        protected bool m_enableWordWrapping = false;
         protected bool m_isCharacterWrappingEnabled = false;
         protected bool m_isNonBreakingSpace = false;
         protected bool m_isIgnoringAlignment;
+
+        public bool forceNoWrapping = false;
 
         /// <summary>
         /// Controls the blending between using character and word spacing to fill-in the space for justified text.
