@@ -176,8 +176,20 @@ namespace TMPro
         /// </summary>
         public TMP_FontAsset font
         {
-            get { return m_fontAsset; }
-            set { if (m_fontAsset == value) return; m_fontAsset = value; LoadFontAsset(); m_havePropertiesChanged = true; SetVerticesDirty(); SetLayoutDirty(); }
+            // Intercept font loading here
+            get
+            {
+                return m_fontAsset;
+            }
+            set
+            {
+                if (m_fontAsset == value) return;
+                m_fontAsset = value;
+                LoadFontAsset();
+                m_havePropertiesChanged = true;
+                SetVerticesDirty();
+                SetLayoutDirty();
+            }
         }
         [SerializeField]
         protected TMP_FontAsset m_fontAsset;
@@ -769,11 +781,16 @@ namespace TMPro
                 m_havePropertiesChanged = true; m_TextWrappingMode = mode; SetVerticesDirty(); SetLayoutDirty();
             }
         }
-        [SerializeField] [FormerlySerializedAs("m_enableWordWrapping")]
+        [SerializeField]
         protected TextWrappingModes m_TextWrappingMode;
+
+        [SerializeField]
+        protected bool m_enableWordWrapping = false;
         protected bool m_isCharacterWrappingEnabled = false;
         protected bool m_isNonBreakingSpace = false;
         protected bool m_isIgnoringAlignment;
+
+        public bool forceNoWrapping = false;
 
         /// <summary>
         /// Controls the blending between using character and word spacing to fill-in the space for justified text.
