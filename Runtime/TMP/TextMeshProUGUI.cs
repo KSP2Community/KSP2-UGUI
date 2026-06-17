@@ -1227,7 +1227,7 @@ namespace TMPro
         #endif
 
         // Font replacement checks should be injected here
-        public static Func<TMP_FontAsset, (TMP_FontAsset newFont, float scale)?> ReplaceFont = null;
+        public static Func<TMP_Text, TMP_FontAsset> ReplaceFont = null;
         public static Action<TMP_Text> AdjustTextSize = null;
         public static HashSet<TextMeshProUGUI> UncheckedReplacements = new();
 
@@ -1243,16 +1243,10 @@ namespace TMPro
 
             if (ReplaceFont != null)
             {
-                // ReplaceFont(this);
-                (TMP_FontAsset newFont, float scale)? result = ReplaceFont(m_fontAsset);
-                if (result is {} newResult)
+                TMP_FontAsset result = ReplaceFont(this);
+                if (result != null)
                 {
-                    m_fontAsset = newResult.newFont;
-                    fontSize *= newResult.scale;
-                    fontSizeMax *= newResult.scale;
-                    fontSizeMin *= newResult.scale;
-
-                    AdjustTextSize?.Invoke(this);
+                    m_fontAsset = result;
                 }
             }
             else
