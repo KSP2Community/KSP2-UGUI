@@ -13,6 +13,12 @@ namespace UnityEngine.UI
     {
         static ClipperRegistry s_Instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticState()
+        {
+            s_Instance = null;
+        }
+
         readonly IndexedSet<IClipper> m_Clippers = new IndexedSet<IClipper>();
 
         protected ClipperRegistry()

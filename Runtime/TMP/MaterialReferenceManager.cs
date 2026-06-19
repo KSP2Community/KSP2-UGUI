@@ -10,6 +10,12 @@ namespace TMPro
     {
         private static MaterialReferenceManager s_Instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Instance = null;
+        }
+
         // Dictionaries used to track Asset references.
         private Dictionary<int, Material> m_FontMaterialReferenceLookup = new Dictionary<int, Material>();
         private Dictionary<int, TMP_FontAsset> m_FontAssetReferenceLookup = new Dictionary<int, TMP_FontAsset>();

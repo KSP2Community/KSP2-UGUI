@@ -9,6 +9,12 @@ namespace TMPro
     {
         private static TMP_DynamicFontAssetUtilities s_Instance = new TMP_DynamicFontAssetUtilities();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Instance = new TMP_DynamicFontAssetUtilities();
+        }
+
         private Dictionary<ulong, FontReference> s_SystemFontLookup;
         private string[] s_SystemFontPaths;
         private uint s_RegularStyleNameHashCode = 1291372090;

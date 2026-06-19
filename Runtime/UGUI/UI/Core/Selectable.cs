@@ -25,6 +25,13 @@ namespace UnityEngine.UI
         protected static int s_SelectableCount = 0;
         private bool m_EnableCalled = false;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Selectables = new Selectable[10];
+            s_SelectableCount = 0;
+        }
+
         /// <summary>
         /// Copy of the array of all the selectable objects currently active in the scene.
         /// </summary>

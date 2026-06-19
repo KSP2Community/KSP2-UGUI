@@ -309,6 +309,12 @@ namespace UnityEngine.UIElements
         private Event m_Event = new Event();
         private static EventModifiers s_Modifiers = EventModifiers.None;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Modifiers = EventModifiers.None;
+        }
+
         // Send IMGUI events to given focus-based target, if any, or simply flush the event queue if not.
         // For uniformity of composite events (keyDown vs navigation), target should remain the same
         // throughout the entire processing cycle.

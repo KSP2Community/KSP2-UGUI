@@ -198,6 +198,13 @@ namespace UnityEngine.EventSystems
         private class RaycastHitComparer : IComparer<RaycastHit>
         {
             public static RaycastHitComparer instance = new RaycastHitComparer();
+
+            [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+            private static void ResetStaticState()
+            {
+                instance = new RaycastHitComparer();
+            }
+
             public int Compare(RaycastHit x, RaycastHit y)
             {
                 return x.distance.CompareTo(y.distance);

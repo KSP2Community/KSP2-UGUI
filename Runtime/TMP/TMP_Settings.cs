@@ -24,6 +24,12 @@ namespace TMPro
     {
         private static TMP_Settings s_Instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Instance = null;
+        }
+
         /// <summary>
         /// Returns the release version of the product.
         /// </summary>

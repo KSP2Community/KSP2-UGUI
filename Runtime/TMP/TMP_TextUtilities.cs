@@ -25,6 +25,12 @@ namespace TMPro
     {
         private static Vector3[] m_rectWorldCorners = new Vector3[4];
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            m_rectWorldCorners = new Vector3[4];
+        }
+
 
         // TEXT INPUT COMPONENT RELATED FUNCTIONS
 

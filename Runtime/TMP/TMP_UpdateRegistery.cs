@@ -14,6 +14,12 @@ namespace TMPro
     {
         private static TMP_UpdateRegistry s_Instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Instance = null;
+        }
+
         private readonly List<ICanvasElement> m_LayoutRebuildQueue = new List<ICanvasElement>();
         private HashSet<EntityId> m_LayoutQueueLookup = new HashSet<EntityId>();
 

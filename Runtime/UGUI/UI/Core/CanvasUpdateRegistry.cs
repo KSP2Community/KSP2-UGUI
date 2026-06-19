@@ -76,6 +76,12 @@ namespace UnityEngine.UI
     {
         private static CanvasUpdateRegistry s_Instance;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_Instance = null;
+        }
+
         private bool m_PerformingLayoutUpdate;
         private bool m_PerformingGraphicUpdate;
 

@@ -26,6 +26,15 @@ namespace UnityEngine.EventSystems
 
         private  static List<EventSystem> m_EventSystems = new List<EventSystem>();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            m_EventSystems = new List<EventSystem>();
+#if PACKAGE_UITOOLKIT
+            s_UIToolkitOverrideConfigOld = null;
+#endif
+        }
+
         /// <summary>
         /// Return the current EventSystem.
         /// </summary>

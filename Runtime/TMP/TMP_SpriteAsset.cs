@@ -248,6 +248,12 @@ namespace TMPro
         /// </summary>
         private static HashSet<EntityId> k_searchedSpriteAssets;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            k_searchedSpriteAssets = null;
+        }
+
         /// <summary>
         /// Search through the given sprite asset and its fallbacks for the specified sprite matching the given unicode character.
         /// </summary>

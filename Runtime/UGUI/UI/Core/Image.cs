@@ -232,6 +232,14 @@ namespace UnityEngine.UI
 
         static protected Material s_ETC1DefaultUI = null;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_TempNewSecondaryTextures = new SecondarySpriteTexture[] {};
+            m_TrackedTexturelessImages = new List<Image>();
+            s_Initialized = false;
+        }
+
         [FormerlySerializedAs("m_Frame")]
         [SerializeField]
         private Sprite m_Sprite;

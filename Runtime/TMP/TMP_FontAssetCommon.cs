@@ -372,6 +372,12 @@ namespace TMPro
     {
         private static List<EntityId> k_searchedFontAssets;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            k_searchedFontAssets = null;
+        }
+
         /// <summary>
         /// Search through the given font and its fallbacks for the specified character.
         /// </summary>

@@ -63,6 +63,12 @@ namespace UnityEngine.UI
 
         private static ReflectionMethodsCache s_ReflectionMethodsCache = null;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_ReflectionMethodsCache = null;
+        }
+
         public static ReflectionMethodsCache Singleton
         {
             get

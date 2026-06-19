@@ -214,6 +214,38 @@ namespace TMPro
         protected static TMP_TextProcessingStack<MaterialReference> m_materialReferenceStack = new TMP_TextProcessingStack<MaterialReference>(new MaterialReference[16]);
         protected int m_currentMaterialIndex;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            m_materialReferences = new MaterialReference[4];
+            m_materialReferenceIndexLookup = new Dictionary<EntityId, int>();
+            m_materialReferenceStack = new TMP_TextProcessingStack<MaterialReference>(new MaterialReference[16]);
+            s_colorWhite = new Color32(255, 255, 255, 255);
+            m_htmlTag = new char[128];
+            m_xmlAttribute = new RichTextTagAttribute[8];
+            m_attributeParameterValues = new float[16];
+            m_SavedWordWrapState = new WordWrapState();
+            m_SavedLineState = new WordWrapState();
+            m_SavedEllipsisState = new WordWrapState();
+            m_SavedLastValidState = new WordWrapState();
+            m_SavedSoftLineBreakState = new WordWrapState();
+            m_EllipsisInsertionCandidateStack = new TMP_TextProcessingStack<WordWrapState>(8, 8);
+            k_ParseTextMarker = new ProfilerMarker("TMP Parse Text");
+            k_InsertNewLineMarker = new ProfilerMarker("TMP.InsertNewLine");
+            k_LargePositiveVector2 = new Vector2(TMP_Math.INT_MAX, TMP_Math.INT_MAX);
+            k_LargeNegativeVector2 = new Vector2(TMP_Math.INT_MIN, TMP_Math.INT_MIN);
+            k_LargePositiveFloat = TMP_Math.FLOAT_MAX;
+            k_LargeNegativeFloat = TMP_Math.FLOAT_MIN;
+            k_LargePositiveInt = TMP_Math.INT_MAX;
+            k_LargeNegativeInt = TMP_Math.INT_MIN;
+            OnCharacterRequest = null;
+            OnFontAssetRequest = null;
+            OnFontMaterialRequest = null;
+            OnSpriteAssetRequest = null;
+            OnColorGradientAssetRequest = null;
+            OnMissingCharacter = null;
+        }
+
 
         /// <summary>
         /// An array containing the materials used by the text object.

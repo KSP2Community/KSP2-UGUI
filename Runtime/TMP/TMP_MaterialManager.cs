@@ -26,6 +26,19 @@ namespace TMPro
             Canvas.willRenderCanvases += OnPreRender;
         }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            m_materialList = new List<MaskingMaterial>();
+            m_fallbackMaterials = new Dictionary<(EntityId, EntityId), FallbackMaterial>();
+            m_fallbackMaterialLookup = new Dictionary<EntityId, (EntityId, EntityId)>();
+            m_fallbackCleanupList = new List<FallbackMaterial>();
+            isFallbackListDirty = false;
+
+            Canvas.willRenderCanvases -= OnPreRender;
+            Canvas.willRenderCanvases += OnPreRender;
+        }
+
         static void OnPreRender()
         {
             if (isFallbackListDirty)

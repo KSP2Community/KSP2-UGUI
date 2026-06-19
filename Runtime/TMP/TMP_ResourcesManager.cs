@@ -15,6 +15,12 @@ namespace TMPro
 
         private static TMP_Settings s_TextSettings;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_TextSettings = null;
+        }
+
         internal static TMP_Settings GetTextSettings()
         {
             if (s_TextSettings == null)

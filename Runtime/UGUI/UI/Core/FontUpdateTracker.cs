@@ -14,6 +14,13 @@ namespace UnityEngine.UI
     {
         static Dictionary<Font, HashSet<Text>> m_Tracked = new Dictionary<Font, HashSet<Text>>();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            Font.textureRebuilt -= RebuildForFont;
+            m_Tracked = new Dictionary<Font, HashSet<Text>>();
+        }
+
         /// <summary>
         /// Register a Text element for receiving texture atlas rebuild calls.
         /// </summary>

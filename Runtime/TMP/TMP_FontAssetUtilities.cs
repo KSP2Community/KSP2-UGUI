@@ -30,6 +30,12 @@ namespace TMPro
         /// </summary>
         private static HashSet<EntityId> k_SearchedAssets;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            k_SearchedAssets = null;
+        }
+
 
         /// <summary>
         /// Returns the text element (character) for the given unicode value taking into consideration the requested font style and weight.
