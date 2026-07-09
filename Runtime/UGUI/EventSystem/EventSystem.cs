@@ -20,20 +20,32 @@ namespace UnityEngine.EventSystems
     /// </remarks>
     public class EventSystem : UIBehaviour
     {
-        private List<BaseInputModule> m_SystemInputModules = new List<BaseInputModule>();
+        private static readonly List<EventSystem> m_EventSystems = new List<EventSystem>();
 
-        private BaseInputModule m_CurrentInputModule;
-
-        private  static List<EventSystem> m_EventSystems = new List<EventSystem>();
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStaticState()
+#if PACKAGE_UITOOLKIT
+        private struct UIToolkitOverrideConfigOld
         {
-            m_EventSystems = new List<EventSystem>();
+            public EventSystem activeEventSystem;
+            public bool sendEvents;
+            public bool createPanelGameObjectsOnStart;
+        }
+        private static UIToolkitOverrideConfigOld? s_UIToolkitOverrideConfigOld = null;
+#endif
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            m_EventSystems.Clear();
+
 #if PACKAGE_UITOOLKIT
             s_UIToolkitOverrideConfigOld = null;
 #endif
         }
+#endif
+        private List<BaseInputModule> m_SystemInputModules = new List<BaseInputModule>();
+
+        private BaseInputModule m_CurrentInputModule;
 
         /// <summary>
         /// Return the current EventSystem.
@@ -112,7 +124,7 @@ namespace UnityEngine.EventSystems
             get { return m_CurrentSelected; }
         }
 
-        [Obsolete("lastSelectedGameObject is no longer supported")]
+        [Obsolete("lastSelectedGameObject is no longer supported", true)]
         public GameObject lastSelectedGameObject
         {
             get { return null; }
@@ -360,16 +372,6 @@ namespace UnityEngine.EventSystems
 #endif
             }
         }
-
-#if PACKAGE_UITOOLKIT
-        private struct UIToolkitOverrideConfigOld
-        {
-            public EventSystem activeEventSystem;
-            public bool sendEvents;
-            public bool createPanelGameObjectsOnStart;
-        }
-        private static UIToolkitOverrideConfigOld? s_UIToolkitOverrideConfigOld = null;
-#endif
 
         /// <summary>
         /// Sets how UI Toolkit runtime panels receive events and handle selection

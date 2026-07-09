@@ -25,21 +25,25 @@ namespace UnityEngine.UI
             public ColorWriteMask colorMask;
         }
 
-        private static List<MatEntry> m_List = new List<MatEntry>();
+        private static readonly List<MatEntry> m_List = new List<MatEntry>();
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStaticState()
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
         {
-            m_List = new List<MatEntry>();
+            ClearAll();
         }
-
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        [Obsolete("Use Material.Add instead.", true)]
-        public static Material Add(Material baseMat, int stencilID) { return null; }
+#endif
 
         /// <summary>
         /// Add a new material using the specified base and stencil ID.
         /// </summary>
+        /// <param name="baseMat">The base material.</param>
+        /// <param name="stencilID">Stencil reference value.</param>
+        /// <param name="operation">Stencil operation on pass.</param>
+        /// <param name="compareFunction">Stencil comparison function.</param>
+        /// <param name="colorWriteMask">Color channel write mask.</param>
+        /// <returns>A material with the requested stencil settings.</returns>
         public static Material Add(Material baseMat, int stencilID, StencilOp operation, CompareFunction compareFunction, ColorWriteMask colorWriteMask)
         {
             return Add(baseMat, stencilID, operation, compareFunction, colorWriteMask, 255, 255);
@@ -55,6 +59,14 @@ namespace UnityEngine.UI
         /// <summary>
         /// Add a new material using the specified base and stencil ID.
         /// </summary>
+        /// <param name="baseMat">The base material.</param>
+        /// <param name="stencilID">Stencil reference value.</param>
+        /// <param name="operation">Stencil operation on pass.</param>
+        /// <param name="compareFunction">Stencil comparison function.</param>
+        /// <param name="colorWriteMask">Color channel write mask.</param>
+        /// <param name="readMask">Stencil read mask.</param>
+        /// <param name="writeMask">Stencil write mask.</param>
+        /// <returns>A material with the requested stencil settings.</returns>
         public static Material Add(Material baseMat, int stencilID, StencilOp operation, CompareFunction compareFunction, ColorWriteMask colorWriteMask, int readMask, int writeMask)
         {
             if ((stencilID <= 0 && colorWriteMask == ColorWriteMask.All) || baseMat == null)
@@ -144,6 +156,7 @@ namespace UnityEngine.UI
         /// <summary>
         /// Remove an existing material, automatically cleaning it up if it's no longer in use.
         /// </summary>
+        /// <param name="customMat">The stencil material to release. Destroyed when reference count reaches zero.</param>
         public static void Remove(Material customMat)
         {
             if (customMat == null)
@@ -167,6 +180,7 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>Releases all cached stencil materials and clears the internal cache.</summary>
         public static void ClearAll()
         {
             var listCount = m_List.Count;

@@ -23,6 +23,8 @@ namespace UnityEngine.UI
     public static class DefaultControls
     {
         static IFactoryControls m_CurrentFactory = DefaultRuntimeFactory.Default;
+
+        /// <summary>The factory for creating GameObjects for the default UI controls. Can be overridden in the Editor to support Undo and Presets.</summary>
         public static IFactoryControls factory
         {
             get { return m_CurrentFactory; }
@@ -30,6 +32,14 @@ namespace UnityEngine.UI
             set { m_CurrentFactory = value; }
 #endif
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            m_CurrentFactory = DefaultRuntimeFactory.Default;
+        }
+#endif
 
         /// <summary>
         /// Factory interface to create a GameObject in this class.
@@ -43,12 +53,16 @@ namespace UnityEngine.UI
         /// </remarks>
         public interface IFactoryControls
         {
+            /// <summary>Creates a new <see cref="GameObject"/> with the given name and components.</summary>
+            /// <param name="name">The name to assign to the new GameObject.</param>
+            /// <param name="components">The component types to add to the new GameObject.</param>
+            /// <returns>The newly created GameObject.</returns>
             GameObject CreateGameObject(string name, params Type[] components);
         }
 
         private class DefaultRuntimeFactory : IFactoryControls
         {
-            public static IFactoryControls Default = new DefaultRuntimeFactory();
+            public static readonly IFactoryControls Default = new DefaultRuntimeFactory();
 
             public GameObject CreateGameObject(string name, params Type[] components)
             {
@@ -100,12 +114,12 @@ namespace UnityEngine.UI
         private const float  kWidth       = 160f;
         private const float  kThickHeight = 30f;
         private const float  kThinHeight  = 20f;
-        private static Vector2 s_ThickElementSize       = new Vector2(kWidth, kThickHeight);
-        private static Vector2 s_ThinElementSize        = new Vector2(kWidth, kThinHeight);
-        private static Vector2 s_ImageElementSize       = new Vector2(100f, 100f);
-        private static Color   s_DefaultSelectableColor = new Color(1f, 1f, 1f, 1f);
-        private static Color   s_PanelColor             = new Color(1f, 1f, 1f, 0.392f);
-        private static Color   s_TextColor              = new Color(50f / 255f, 50f / 255f, 50f / 255f, 1f);
+        private static readonly Vector2 s_ThickElementSize       = new Vector2(kWidth, kThickHeight);
+        private static readonly Vector2 s_ThinElementSize        = new Vector2(kWidth, kThinHeight);
+        private static readonly Vector2 s_ImageElementSize       = new Vector2(100f, 100f);
+        private static readonly Color   s_DefaultSelectableColor = new Color(1f, 1f, 1f, 1f);
+        private static readonly Color   s_PanelColor             = new Color(1f, 1f, 1f, 0.392f);
+        private static readonly Color   s_TextColor              = new Color(50f / 255f, 50f / 255f, 50f / 255f, 1f);
 
         // Helper methods at top
 

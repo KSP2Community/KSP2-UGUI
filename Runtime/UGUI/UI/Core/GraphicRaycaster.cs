@@ -6,14 +6,15 @@ using UnityEngine.Serialization;
 
 namespace UnityEngine.UI
 {
-    [AddComponentMenu("Event/Graphic Raycaster")]
-    [RequireComponent(typeof(Canvas))]
-    [UGUIHelpURL("GraphicRaycaster")]
     /// <summary>
     /// A derived BaseRaycaster to raycast against Graphic elements.
     /// </summary>
+    [AddComponentMenu("Event/Graphic Raycaster")]
+    [RequireComponent(typeof(Canvas))]
+    [UGUIHelpURL("GraphicRaycaster")]
     public class GraphicRaycaster : BaseRaycaster
     {
+        /// <summary>Sentinel value meaning no event mask layer filter is set.</summary>
         protected const int kNoEventMaskSet = -1;
 
         /// <summary>
@@ -42,9 +43,7 @@ namespace UnityEngine.UI
         /// <summary>
         /// Priority of the raycaster based upon sort order.
         /// </summary>
-        /// <returns>
-        /// The sortOrder priority.
-        /// </returns>
+        /// <value>The sortOrder priority.</value>
         public override int sortOrderPriority
         {
             get
@@ -60,9 +59,7 @@ namespace UnityEngine.UI
         /// <summary>
         /// Priority of the raycaster based upon render order.
         /// </summary>
-        /// <returns>
-        /// The renderOrder priority.
-        /// </returns>
+        /// <value>The renderOrder priority.</value>
         public override int renderOrderPriority
         {
             get
@@ -92,6 +89,7 @@ namespace UnityEngine.UI
         /// </summary>
         public BlockingObjects blockingObjects { get {return m_BlockingObjects; } set { m_BlockingObjects = value; } }
 
+        /// <summary>Serialized backing field for <see cref="blockingMask"/>.</summary>
         [SerializeField]
         protected LayerMask m_BlockingMask = kNoEventMaskSet;
 
@@ -102,6 +100,7 @@ namespace UnityEngine.UI
 
         private Canvas m_Canvas;
 
+        /// <summary>Protected default constructor. Use <see cref="GameObject.AddComponent{T}"/> to add a GraphicRaycaster to a GameObject.</summary>
         protected GraphicRaycaster()
         {}
 
@@ -289,11 +288,7 @@ namespace UnityEngine.UI
         /// <summary>
         /// The camera that will generate rays for this raycaster.
         /// </summary>
-        /// <returns>
-        /// - Null if Camera mode is ScreenSpaceOverlay or ScreenSpaceCamera and has no camera.
-        /// - canvas.worldCanvas if not null
-        /// - Camera.main.
-        /// </returns>
+        /// <value>Null if Camera mode is ScreenSpaceOverlay or ScreenSpaceCamera and has no camera; canvas.worldCanvas if not null; otherwise Camera.main.</value>
         public override Camera eventCamera
         {
             get

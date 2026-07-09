@@ -82,13 +82,32 @@ namespace UnityEngine.UI
         : UIBehaviour,
           ICanvasElement
     {
-        static protected Material s_DefaultUI = null;
-        static protected Texture2D s_WhiteTexture = null;
+        /// <summary>Default material used for UI graphics when no material is assigned.</summary>
+        protected static Material s_DefaultUI = null;
+        /// <summary>Cached reference to a plain white texture used as the default UI texture.</summary>
+        protected static Texture2D s_WhiteTexture = null;
+        /// <summary>Shared working mesh used during mesh generation to avoid per-frame allocations.</summary>
+        protected static Mesh s_Mesh;
+        private static readonly VertexHelper s_VertexHelper = new VertexHelper();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_DefaultUI = null;
+            s_WhiteTexture = null;
+
+            if (s_Mesh != null)
+            {
+                DestroyImmediate(s_Mesh);
+                s_Mesh = null;
+            }
+        }
+#endif
 
         /// <summary>
         /// Default material used to draw UI elements if no explicit material was specified.
         /// </summary>
-
         static public Material defaultGraphicMaterial
         {
             get
@@ -99,13 +118,15 @@ namespace UnityEngine.UI
             }
         }
 
-        // Cached and saved values
+        /// <summary>Serialized backing field for the custom material assigned to this graphic.</summary>
         [FormerlySerializedAs("m_Mat")]
         [SerializeField] protected Material m_Material;
 
         [SerializeField] private Color m_Color = Color.white;
 
+        /// <summary>Internal flag to avoid layout updates during bulk operations.</summary>
         [NonSerialized] protected bool m_SkipLayoutUpdate;
+        /// <summary>Internal flag to avoid material updates during bulk operations.</summary>
         [NonSerialized] protected bool m_SkipMaterialUpdate;
 
         /// <summary>
@@ -210,29 +231,35 @@ namespace UnityEngine.UI
         [NonSerialized] private bool m_VertsDirty;
         [NonSerialized] private bool m_MaterialDirty;
 
+        /// <summary>Callback invoked when the layout of this graphic is marked dirty.</summary>
         [NonSerialized] protected UnityAction m_OnDirtyLayoutCallback;
+        /// <summary>Callback invoked when the vertex data of this graphic is marked dirty.</summary>
         [NonSerialized] protected UnityAction m_OnDirtyVertsCallback;
+        /// <summary>Callback invoked when the material of this graphic is marked dirty.</summary>
         [NonSerialized] protected UnityAction m_OnDirtyMaterialCallback;
 
-        [NonSerialized] protected static Mesh s_Mesh;
-        [NonSerialized] private static readonly VertexHelper s_VertexHelper = new VertexHelper();
-
+        /// <summary>Cached mesh used by the legacy mesh generation path.</summary>
         [NonSerialized] protected Mesh m_CachedMesh;
+        /// <summary>Cached UV array used by the legacy mesh generation path.</summary>
         [NonSerialized] protected Vector2[] m_CachedUvs;
         // Tween controls for the Graphic
         [NonSerialized]
         private readonly TweenRunner<ColorTween> m_ColorTweenRunner;
 
+        /// <summary>Obsolete. The legacy mesh generation is no longer supported.</summary>
+		[Obsolete("useLegacyMeshGeneration is deprecated now that the legacy mesh generation is no longer supported.")]
         protected bool useLegacyMeshGeneration { get; set; }
 
-        // Called by Unity prior to deserialization,
-        // should not be called by users
+        // Called by Unity prior to deserialization, should not be called by users.
+        /// <summary>Protected default constructor. Use <see cref="GameObject.AddComponent{T}"/> to add a Graphic to a GameObject.</summary>
         protected Graphic()
         {
             if (m_ColorTweenRunner == null)
                 m_ColorTweenRunner = new TweenRunner<ColorTween>();
             m_ColorTweenRunner.Init(this);
-            useLegacyMeshGeneration = true;
+#pragma warning disable 618
+            useLegacyMeshGeneration = false;
+#pragma warning restore 618
         }
 
         /// <summary>
@@ -326,6 +353,7 @@ namespace UnityEngine.UI
                 m_OnDirtyMaterialCallback();
         }
 
+        /// <summary>Marks the raycast cache dirty so it will be recalculated on the next query.</summary>
         public void SetRaycastDirty()
         {
             if (m_RaycastTargetCache != m_RaycastTarget)
@@ -339,6 +367,7 @@ namespace UnityEngine.UI
             m_RaycastTargetCache = m_RaycastTarget;
         }
 
+        /// <summary>Called when the RectTransform dimensions change. Sets layout and vertices dirty.</summary>
         protected override void OnRectTransformDimensionsChange()
         {
             if (gameObject.activeInHierarchy)
@@ -354,12 +383,14 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>Called before the parent transform changes. Unregisters from the current canvas hierarchy.</summary>
         protected override void OnBeforeTransformParentChanged()
         {
             GraphicRegistry.UnregisterGraphicForCanvas(canvas, this);
             LayoutRebuilder.MarkLayoutForRebuild(rectTransform);
         }
 
+        /// <summary>Called when the parent changes. Re-registers with the new canvas hierarchy and marks dirty.</summary>
         protected override void OnTransformParentChanged()
         {
             base.OnTransformParentChanged();
@@ -578,6 +609,7 @@ namespace UnityEngine.UI
             base.OnDisable();
         }
 
+        /// <summary>Called when the component is destroyed. Releases mesh resources and unregisters from the registries.</summary>
         protected override void OnDestroy()
         {
 #if UNITY_EDITOR
@@ -592,6 +624,7 @@ namespace UnityEngine.UI
             base.OnDestroy();
         }
 
+        /// <summary>Called when the Canvas hierarchy changes. Updates the cached parent canvas reference.</summary>
         protected override void OnCanvasHierarchyChanged()
         {
             // Use m_Cavas so we dont auto call CacheCanvas
@@ -663,9 +696,11 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>Called by the canvas update system after layout is complete. No-op for base Graphic.</summary>
         public virtual void LayoutComplete()
         {}
 
+        /// <summary>Called by the canvas update system after graphic updates are complete. No-op for base Graphic.</summary>
         public virtual void GraphicUpdateComplete()
         {}
 
@@ -687,9 +722,11 @@ namespace UnityEngine.UI
         /// </summary>
         protected virtual void UpdateGeometry()
         {
+#pragma warning disable 618
             if (useLegacyMeshGeneration)
+#pragma warning restore 618
             {
-                DoLegacyMeshGeneration();
+                Debug.LogError("Legacy mesh generation is no longer supported.", this);
             }
             else
             {
@@ -716,33 +753,7 @@ namespace UnityEngine.UI
             canvasRenderer.SetMesh(workerMesh);
         }
 
-        private void DoLegacyMeshGeneration()
-        {
-            if (rectTransform != null && rectTransform.rect.width >= 0 && rectTransform.rect.height >= 0)
-            {
-#pragma warning disable 618
-                OnPopulateMesh(workerMesh);
-#pragma warning restore 618
-            }
-            else
-            {
-                workerMesh.Clear();
-            }
-
-            var components = ListPool<Component>.Get();
-            GetComponents(typeof(IMeshModifier), components);
-
-            for (var i = 0; i < components.Count; i++)
-            {
-#pragma warning disable 618
-                ((IMeshModifier)components[i]).ModifyMesh(workerMesh);
-#pragma warning restore 618
-            }
-
-            ListPool<Component>.Release(components);
-            canvasRenderer.SetMesh(workerMesh);
-        }
-
+        /// <summary>Shared static mesh reused across all graphics during vertex generation.</summary>
         protected static Mesh workerMesh
         {
             get
@@ -755,18 +766,10 @@ namespace UnityEngine.UI
                 return s_Mesh;
             }
         }
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        [Obsolete("Use OnPopulateMesh instead.", true)]
-        protected virtual void OnFillVBO(System.Collections.Generic.List<UIVertex> vbo) {}
 
-        [Obsolete("Use OnPopulateMesh(VertexHelper vh) instead.", false)]
-        /// <summary>
-        /// Callback function when a UI element needs to generate vertices. Fills the vertex buffer data.
-        /// </summary>
-        /// <param name="m">Mesh to populate with UI data.</param>
-        /// <remarks>
-        /// Used by Text, UI.Image, and RawImage for example to generate vertices specific to their use case.
-        /// </remarks>
+        /// <summary>Obsolete legacy mesh population callback. Override <see cref="OnPopulateMesh(VertexHelper)"/> instead.</summary>
+        /// <param name="m">The mesh to populate.</param>
+        [Obsolete("Use OnPopulateMesh(VertexHelper vh) instead.", true)]
         protected virtual void OnPopulateMesh(Mesh m)
         {
             OnPopulateMesh(s_VertexHelper);
@@ -829,6 +832,7 @@ namespace UnityEngine.UI
 
         // Call from unity if animation properties have changed
 
+        /// <summary>Called when animation properties are applied. Marks the graphic dirty for a full rebuild.</summary>
         protected override void OnDidApplyAnimationProperties()
         {
             SetAllDirty();

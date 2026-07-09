@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Reflection;
 
 namespace UnityEngine.UI
 {
@@ -63,11 +61,13 @@ namespace UnityEngine.UI
 
         private static ReflectionMethodsCache s_ReflectionMethodsCache = null;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStaticState()
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
         {
             s_ReflectionMethodsCache = null;
         }
+#endif
 
         public static ReflectionMethodsCache Singleton
         {

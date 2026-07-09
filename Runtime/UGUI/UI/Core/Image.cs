@@ -230,15 +230,25 @@ namespace UnityEngine.UI
             Left,
         }
 
+        /// <summary>Default material used for ETC1 compressed images on platforms that require it.</summary>
         static protected Material s_ETC1DefaultUI = null;
+        static SecondarySpriteTexture[] s_TempNewSecondaryTextures = Array.Empty<SecondarySpriteTexture>();
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStaticState()
+        // To track textureless images, which will be rebuild if sprite atlas manager registered a Sprite Atlas that will give this image new texture
+        static readonly List<Image> m_TrackedTexturelessImages = new List<Image>();
+        static bool s_Initialized;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
         {
-            s_TempNewSecondaryTextures = new SecondarySpriteTexture[] {};
-            m_TrackedTexturelessImages = new List<Image>();
-            s_Initialized = false;
+            SpriteAtlasManager.atlasRegistered -= RebuildImage;
+            s_ETC1DefaultUI = null;
+            s_TempNewSecondaryTextures = Array.Empty<SecondarySpriteTexture>();
+            m_TrackedTexturelessImages.Clear();
+            s_Initialized = default;
         }
+#endif
 
         [FormerlySerializedAs("m_Frame")]
         [SerializeField]
@@ -299,6 +309,8 @@ namespace UnityEngine.UI
 
                         ResetAlphaHitThresholdIfNeeded();
                         SetAllDirty();
+                        if (m_Tracked)
+                            UnTrackImage(this);
                         TrackSprite();
                     }
                 }
@@ -357,10 +369,10 @@ namespace UnityEngine.UI
         /// is set to /null/.
         /// </remarks>
         /// <example>
-        /// Note: The script example below has two buttons.  The button textures are loaded from the
+        /// <para>Note: The script example below has two buttons.  The button textures are loaded from the
         /// /Resources/ folder.  (They are not used in the shown example).  Two sprites are added to
         /// the example code.  /Example1/ and /Example2/ are functions called by the button OnClick
-        /// functions.  Example1 calls overrideSprite and Example2 sets overrideSprite to null.
+        /// functions.  Example1 calls overrideSprite and Example2 sets overrideSprite to null.</para>
         /// <code>
         /// <![CDATA[
         /// using System.Collections;
@@ -408,6 +420,8 @@ namespace UnityEngine.UI
                 if (SetPropertyUtility.SetClass(ref m_OverrideSprite, value))
                 {
                     SetAllDirty();
+                    if (m_Tracked)
+                        UnTrackImage(this);
                     TrackSprite();
                 }
             }
@@ -469,6 +483,7 @@ namespace UnityEngine.UI
 
         /// Filling method for filled sprites.
         [SerializeField] private FillMethod m_FillMethod = FillMethod.Radial360;
+        /// <summary>Gets or sets the fill method used when the image type is <see cref="Type.Filled"/>.</summary>
         public FillMethod fillMethod { get { return m_FillMethod; } set { if (SetPropertyUtility.SetStruct(ref m_FillMethod, value)) { SetVerticesDirty(); m_FillOrigin = 0; } } }
 
         /// Amount of the Image shown. 0-1 range with 0 being nothing shown, and 1 being the full Image.
@@ -608,12 +623,11 @@ namespace UnityEngine.UI
         // Whether this is being tracked for Atlas Binding.
         private bool m_Tracked = false;
 
-        [Obsolete("eventAlphaThreshold has been deprecated. Use eventMinimumAlphaThreshold instead (UnityUpgradable) -> alphaHitTestMinimumThreshold")]
-
         /// <summary>
         /// Obsolete. You should use UI.Image.alphaHitTestMinimumThreshold instead.
         /// The alpha threshold specifies the minimum alpha a pixel must have for the event to considered a "hit" on the Image.
         /// </summary>
+        [Obsolete("eventAlphaThreshold has been deprecated. Use eventMinimumAlphaThreshold instead (UnityUpgradable) -> alphaHitTestMinimumThreshold", true)]
         public float eventAlphaThreshold { get { return 1 - alphaHitTestMinimumThreshold; } set { alphaHitTestMinimumThreshold = 1 - value; } }
 
         /// <summary>
@@ -667,9 +681,9 @@ namespace UnityEngine.UI
         public bool useSpriteMesh { get { return m_UseSpriteMesh; } set { if (SetPropertyUtility.SetStruct(ref m_UseSpriteMesh, value)) SetVerticesDirty(); } }
 
 
+        /// <summary>Protected default constructor. Use <see cref="GameObject.AddComponent{T}"/> to add an Image to a GameObject.</summary>
         protected Image()
         {
-            useLegacyMeshGeneration = false;
         }
 
         /// <summary>
@@ -746,6 +760,7 @@ namespace UnityEngine.UI
         // case 1066689 cache referencePixelsPerUnit when canvas parent is disabled;
         private float m_CachedReferencePixelsPerUnit = 100;
 
+        /// <summary>Pixels per unit, accounting for the Sprite and Canvas settings.</summary>
         public float pixelsPerUnit
         {
             get
@@ -761,6 +776,7 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>Pixels per unit scaled by <see cref="pixelsPerUnitMultiplier"/>.</summary>
         protected float multipliedPixelsPerUnit
         {
             get { return pixelsPerUnit * m_PixelsPerUnitMultiplier; }
@@ -888,6 +904,7 @@ namespace UnityEngine.UI
         /// <summary>
         /// Update the UI renderer mesh.
         /// </summary>
+        /// <param name="toFill">The VertexHelper to populate with geometry.</param>
         protected override void OnPopulateMesh(VertexHelper toFill)
         {
             if (activeSprite == null)
@@ -925,12 +942,14 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>Called when it becomes enabled. Registers with the sprite atlas system if needed.</summary>
         protected override void OnEnable()
         {
             base.OnEnable();
             TrackSprite();
         }
 
+        /// <summary>Called when it becomes disabled. Unregisters from the sprite atlas system.</summary>
         protected override void OnDisable()
         {
             base.OnDisable();
@@ -939,7 +958,6 @@ namespace UnityEngine.UI
                 UnTrackImage(this);
         }
 
-        static SecondarySpriteTexture[] s_TempNewSecondaryTextures = {};
         SecondarySpriteTexture [] m_SecondaryTextures;
 
         internal SecondarySpriteTexture [] secondaryTextures => m_SecondaryTextures; // Internal for testing only
@@ -1021,7 +1039,6 @@ namespace UnityEngine.UI
                 for (var i = 0; i < m_SecondaryTextures.Length; ++i)
                 {
                     var secondaryTex = m_SecondaryTextures[i];
-                
                     renderer.SetSecondaryTexture(i, secondaryTex.name, secondaryTex.texture);
                 }
             }
@@ -1055,6 +1072,7 @@ namespace UnityEngine.UI
             SetSecondaryTextures(canvasRenderer);
         }
 
+        /// <summary>Called when the Canvas hierarchy changes. Updates cached canvas-related values.</summary>
         protected override void OnCanvasHierarchyChanged()
         {
             base.OnCanvasHierarchyChanged();
@@ -1830,20 +1848,17 @@ namespace UnityEngine.UI
             }
         }
 
-        /// <summary>
-        /// See ILayoutElement.CalculateLayoutInputHorizontal.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual void CalculateLayoutInputHorizontal() {}
 
-        /// <summary>
-        /// See ILayoutElement.CalculateLayoutInputVertical.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual void CalculateLayoutInputVertical() {}
 
-        /// <summary>
-        /// See ILayoutElement.minWidth.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual float minWidth { get { return 0; } }
+
+        /// <inheritdoc/>
+        public virtual float maxWidth { get { return LayoutUtility.DefaultMaxSize; } }
 
         /// <summary>
         /// If there is a sprite being rendered returns the size of that sprite.
@@ -1861,15 +1876,14 @@ namespace UnityEngine.UI
             }
         }
 
-        /// <summary>
-        /// See ILayoutElement.flexibleWidth.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual float flexibleWidth { get { return -1; } }
 
-        /// <summary>
-        /// See ILayoutElement.minHeight.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual float minHeight { get { return 0; } }
+
+        /// <inheritdoc/>
+        public virtual float maxHeight { get { return LayoutUtility.DefaultMaxSize; } }
 
         /// <summary>
         /// If there is a sprite being rendered returns the size of that sprite.
@@ -1887,14 +1901,10 @@ namespace UnityEngine.UI
             }
         }
 
-        /// <summary>
-        /// See ILayoutElement.flexibleHeight.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual float flexibleHeight { get { return -1; } }
 
-        /// <summary>
-        /// See ILayoutElement.layoutPriority.
-        /// </summary>
+        /// <inheritdoc/>
         public virtual int layoutPriority { get { return 0; } }
 
         /// <summary>
@@ -1981,10 +1991,6 @@ namespace UnityEngine.UI
             return local + spriteRect.position;
         }
 
-        // To track textureless images, which will be rebuild if sprite atlas manager registered a Sprite Atlas that will give this image new texture
-        static List<Image> m_TrackedTexturelessImages = new List<Image>();
-        static bool s_Initialized;
-
         static void RebuildImage(SpriteAtlas spriteAtlas)
         {
             for (var i = m_TrackedTexturelessImages.Count - 1; i >= 0; i--)
@@ -2014,6 +2020,7 @@ namespace UnityEngine.UI
             m_TrackedTexturelessImages.Remove(g);
         }
 
+        /// <summary>Called when animation properties are applied. Marks the graphic dirty for a rebuild.</summary>
         protected override void OnDidApplyAnimationProperties()
         {
             SetMaterialDirty();

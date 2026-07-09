@@ -4,17 +4,6 @@ using UnityEngine.EventSystems;
 
 namespace UnityEngine.UI
 {
-    [Obsolete("Use BaseMeshEffect instead", true)]
-    /// <summary>
-    /// Obsolete class use BaseMeshEffect instead.
-    /// </summary>
-    public abstract class BaseVertexEffect
-    {
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        [Obsolete("Use BaseMeshEffect.ModifyMeshes instead", true)] //We can't upgrade automatically since the signature changed.
-        public abstract void ModifyVertices(List<UIVertex> vertices);
-    }
-
     /// <summary>
     /// Base class for effects that modify the generated Mesh.
     /// </summary>
@@ -26,25 +15,15 @@ namespace UnityEngine.UI
     ///
     ///public class PositionAsUV1 : BaseMeshEffect
     ///{
-    ///    protected PositionAsUV1()
-    ///    {}
-    ///
-    ///    public override void ModifyMesh(Mesh mesh)
+    ///    public override void ModifyMesh(VertexHelper vh)
     ///    {
-    ///        if (!IsActive())
-    ///            return;
-    ///
-    ///        var verts = mesh.vertices.ToList();
-    ///        var uvs = ListPool<Vector2>.Get();
-    ///
-    ///        for (int i = 0; i < verts.Count; i++)
+    ///        UIVertex vert = new UIVertex();
+    ///        for (int i = 0; i < vh.currentVertCount; i++)
     ///        {
-    ///            var vert = verts[i];
-    ///            uvs.Add(new Vector2(verts[i].x, verts[i].y));
-    ///            verts[i] = vert;
+    ///            vh.PopulateUIVertex(ref vert, i);
+    ///            vert.uv1 =  new Vector2(vert.position.x, vert.position.y);
+    ///            vh.SetUIVertex(vert, i);
     ///        }
-    ///        mesh.SetUVs(1, uvs);
-    ///        ListPool<Vector2>.Release(uvs);
     ///    }
     ///}
     /// ]]>
@@ -71,6 +50,7 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>Called when the component becomes enabled. Marks the associated graphic's vertices as dirty.</summary>
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -78,6 +58,7 @@ namespace UnityEngine.UI
                 graphic.SetVerticesDirty();
         }
 
+        /// <summary>Called when the component becomes disabled. Marks the associated graphic's vertices as dirty.</summary>
         protected override void OnDisable()
         {
             if (graphic != null)
@@ -109,6 +90,7 @@ namespace UnityEngine.UI
         /// Function that is called when the Graphic is populating the mesh.
         /// </summary>
         /// <param name="mesh">The generated mesh of the Graphic element that needs modification.</param>
+		[Obsolete("Use IMeshModifier.ModifyMesh(VertexHelper verts) instead", true)]
         public virtual void ModifyMesh(Mesh mesh)
         {
             using (var vh = new VertexHelper(mesh))
@@ -118,6 +100,10 @@ namespace UnityEngine.UI
             }
         }
 
+        /// <summary>
+        /// Called when the associated <see cref="Graphic"/> populates its mesh. Override to apply custom vertex modifications.
+        /// </summary>
+        /// <param name="vh">The <see cref="VertexHelper"/> containing the mesh data to modify.</param>
         public abstract void ModifyMesh(VertexHelper vh);
     }
 }
