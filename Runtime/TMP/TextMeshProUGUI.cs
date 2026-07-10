@@ -830,6 +830,15 @@ namespace TMPro
 
         protected override void OnEnable()
         {
+            // Preserve legacy KSP2 serialized word-wrapping state.
+            if (m_enableWordWrapping && !forceNoWrapping)
+            {
+                textWrappingMode = TextWrappingModes.Normal;
+                m_havePropertiesChanged = true;
+                m_isLayoutDirty = true;
+                ComputeMarginSize();
+            }
+
             //Debug.Log("***** OnEnable() called on object ID " + GetEntityId() + ". *****");
 
             // Return if Awake() has not been called on the text object.
@@ -873,6 +882,8 @@ namespace TMPro
 
             RecalculateClipping();
             RecalculateMasking();
+
+            RepairMissingFontAssetMaterial();
         }
 
 
@@ -910,6 +921,9 @@ namespace TMPro
         protected override void OnDestroy()
         {
             //Debug.Log("***** OnDestroy() called on object ID " + GetEntityId() + ". *****");
+
+            // Make sure the pending set doesn't keep a reference to this object.
+            UncheckedReplacements.Remove(this);
 
             // UnRegister Graphic Component
             GraphicRegistry.UnregisterGraphicForCanvas(m_canvas, this);
@@ -1194,11 +1208,38 @@ namespace TMPro
         }
         #endif
 
+        // Font replacement checks should be injected here.
+        public static Func<TMP_Text, TMP_FontAsset> ReplaceFont = null;
+        public static Action<TMP_Text> AdjustTextSize = null;
+        public static HashSet<TextMeshProUGUI> UncheckedReplacements = new();
 
-        // Function which loads either the default font or a newly assigned font asset. This function also assigned the appropriate material to the renderer.
+        private void RepairMissingFontAssetMaterial()
+        {
+            if (m_fontAsset != null && m_fontAsset.material == null && m_sharedMaterial != null)
+            {
+                m_fontAsset.material = m_sharedMaterial;
+            }
+        }
+
+        // Function which loads either the default font or a newly assigned font asset. This function also assigns
+        // the appropriate material to the renderer.
         protected override void LoadFontAsset()
         {
-            //Debug.Log("***** LoadFontAsset() *****"); //TextMeshPro LoadFontAsset() has been called."); // Current Font Asset is " + (font != null ? font.name: "Null") );
+            //Debug.Log("***** LoadFontAsset() *****"); //TextMeshPro LoadFontAsset() has been called.
+            // Current Font Asset is " + (font != null ? font.name: "Null") );
+
+            if (ReplaceFont != null)
+            {
+                TMP_FontAsset result = ReplaceFont(this);
+                if (result != null)
+                {
+                    m_fontAsset = result;
+                }
+            }
+            else
+            {
+                UncheckedReplacements.Add(this);
+            }
 
             if (m_fontAsset == null)
             {
