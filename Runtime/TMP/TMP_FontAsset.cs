@@ -761,12 +761,22 @@ namespace TMPro
 
         private static string s_DefaultMaterialSuffix = " Atlas Material";
 
+        internal void EnsureValidUnitsPerEm()
+        {
+            // KSP2's dynamic CJK fallback assets predate this TextCore field.
+            // A stable fallback avoids a serialization warning and invalid EM-based metrics.
+            if (m_FaceInfo.unitsPerEM == 0)
+                m_FaceInfo.unitsPerEM = 1000;
+        }
+
         /// <summary>
         /// Reads the various data tables of the font asset and populates various data structures to allow for faster lookup of related font asset data.
         /// </summary>
         public void ReadFontAssetDefinition()
         {
             k_ReadFontAssetDefinitionMarker.Begin();
+
+            EnsureValidUnitsPerEm();
 
             #if UNITY_EDITOR
             // Check version number of font asset to see if it needs to be upgraded.

@@ -28,6 +28,16 @@ namespace TMPro
     #endif
     public class TextMeshProUGUI : TMP_Text, ILayoutElement
     {
+        private static readonly Dictionary<string, Material> s_ReduxMaterialReplacements = new();
+        private static readonly HashSet<EntityId> s_ReduxInitializedFonts = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetReduxCompatibilityState()
+        {
+            s_ReduxMaterialReplacements.Clear();
+            s_ReduxInitializedFonts.Clear();
+        }
+
         /// <summary>
         /// Get the material that will be used for rendering.
         /// </summary>
@@ -856,6 +866,10 @@ namespace TMPro
 
         protected override void OnEnable()
         {
+            Material compatibleMaterial = InitializeReduxFontGraph(font, fontSharedMaterial);
+            if (compatibleMaterial != null)
+                fontSharedMaterial = compatibleMaterial;
+
             // Force text wrapping mode in all UGUI assets generally, as it seems to be the only way to fix shit
             if (m_enableWordWrapping && !forceNoWrapping)
             {
@@ -908,6 +922,75 @@ namespace TMPro
 
             RecalculateClipping();
             RecalculateMasking();
+        }
+
+
+        private static Material InitializeReduxFontGraph(TMP_FontAsset fontAsset, Material inheritedMaterial)
+        {
+            if (fontAsset == null)
+                return null;
+
+            fontAsset.EnsureValidUnitsPerEm();
+
+            Material fontMaterial = CreateReduxCompatibleMaterial(
+                fontAsset.material != null ? fontAsset.material : inheritedMaterial,
+                fontAsset);
+            if (fontMaterial != null)
+                fontAsset.material = fontMaterial;
+
+            if (s_ReduxInitializedFonts.Add(fontAsset.GetEntityId()))
+            {
+                fontAsset.ReadFontAssetDefinition();
+
+                if (fontAsset.fallbackFontAssetTable != null)
+                {
+                    foreach (TMP_FontAsset fallback in fontAsset.fallbackFontAssetTable)
+                        InitializeReduxFontGraph(fallback, fontMaterial);
+                }
+
+                if (fontAsset.fontWeightTable != null)
+                {
+                    foreach (TMP_FontWeightPair pair in fontAsset.fontWeightTable)
+                    {
+                        InitializeReduxFontGraph(pair.regularTypeface, fontMaterial);
+                        InitializeReduxFontGraph(pair.italicTypeface, fontMaterial);
+                    }
+                }
+            }
+
+            return fontMaterial;
+        }
+
+
+        private static Material CreateReduxCompatibleMaterial(Material source, TMP_FontAsset fontAsset)
+        {
+            if (source == null || source.shader == null)
+                return null;
+
+            Shader target = Shader.Find(source.shader.name);
+            if (target == null)
+                return null;
+            if (target == source.shader)
+                return source;
+
+            string key = source.GetEntityId() + ":" + fontAsset.GetEntityId();
+            if (!s_ReduxMaterialReplacements.TryGetValue(key, out Material replacement) || replacement == null)
+            {
+                replacement = new Material(source)
+                {
+                    name = source.name + " [Redux TMP Compatibility]",
+                    shader = target,
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+
+                Texture2D atlas = fontAsset.atlasTexture;
+                if (atlas != null && replacement.HasProperty(ShaderUtilities.ID_MainTex))
+                    replacement.SetTexture(ShaderUtilities.ID_MainTex, atlas);
+
+                s_ReduxMaterialReplacements[key] = replacement;
+            }
+
+            return replacement;
         }
 
 
