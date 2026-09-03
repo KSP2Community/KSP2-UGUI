@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Pool;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using Unity.Profiling;
@@ -134,9 +135,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        ///
-        /// </summary>
+        /// <inheritdoc/>
         public override void SetLayoutDirty()
         {
             m_isPreferredWidthDirty = true;
@@ -154,9 +153,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        ///
-        /// </summary>
+        /// <inheritdoc/>
         public override void SetMaterialDirty()
         {
             if (this == null || !this.IsActive())
@@ -173,8 +170,9 @@ namespace TMPro
         }
 
 
+        /// <inheritdoc/>
         /// <summary>
-        ///
+        /// Marks layout, vertices and material as dirty.
         /// </summary>
         public override void SetAllDirty()
         {
@@ -218,11 +216,10 @@ namespace TMPro
             m_DelayedMaterialRebuild = null;
         }
 
-
+        /// <inheritdoc/>
         /// <summary>
-        ///
+        /// Rebuilds the text geometry for the given canvas update phase.
         /// </summary>
-        /// <param name="update"></param>
         public override void Rebuild(CanvasUpdate update)
         {
             if (this == null) return;
@@ -260,12 +257,10 @@ namespace TMPro
             //m_isPivotDirty = false;
         }
 
-
+        /// <inheritdoc/>
         /// <summary>
-        ///
+        /// Returns the material with masking and stencil applied for rendering.
         /// </summary>
-        /// <param name="baseMaterial"></param>
-        /// <returns></returns>
         public override Material GetModifiedMaterial(Material baseMaterial)
         {
             Material mat = baseMaterial;
@@ -288,9 +283,9 @@ namespace TMPro
             return mat;
         }
 
-
+        /// <inheritdoc/>
         /// <summary>
-        ///
+        /// Updates the material used for rendering the text.
         /// </summary>
         protected override void UpdateMaterial()
         {
@@ -379,12 +374,10 @@ namespace TMPro
         //    base.SetClipRect(clipRect, validRect);
         //}
 
-
+        /// <inheritdoc/>
         /// <summary>
         /// Override of the Cull function to provide for the ability to override the culling of the text object.
         /// </summary>
-        /// <param name="clipRect"></param>
-        /// <param name="validRect"></param>
         public override void Cull(Rect clipRect, bool validRect)
         {
             m_ShouldUpdateCulling = false;
@@ -575,12 +568,7 @@ namespace TMPro
             OnPreRenderCanvas();
         }
 
-
-        /// <summary>
-        /// Function used to evaluate the length of a text string.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         public override TMP_TextInfo GetTextInfo(string text)
         {
             SetText(text);
@@ -619,11 +607,7 @@ namespace TMPro
         public override event Action<TMP_TextInfo> OnPreRenderText;
 
 
-        /// <summary>
-        /// Function to update the geometry of the main and sub text objects.
-        /// </summary>
-        /// <param name="mesh"></param>
-        /// <param name="index"></param>
+        /// <inheritdoc/>
         public override void UpdateGeometry(Mesh mesh, int index)
         {
             mesh.RecalculateBounds();
@@ -767,27 +751,27 @@ namespace TMPro
         private bool m_isRegisteredForEvents;
 
         // Profiler Marker declarations
-        private static ProfilerMarker k_GenerateTextMarker = new ProfilerMarker("TMP.GenerateText");
-        private static ProfilerMarker k_SetArraySizesMarker = new ProfilerMarker("TMP.SetArraySizes");
-        private static ProfilerMarker k_GenerateTextPhaseIMarker = new ProfilerMarker("TMP GenerateText - Phase I");
-        private static ProfilerMarker k_ParseMarkupTextMarker = new ProfilerMarker("TMP Parse Markup Text");
-        private static ProfilerMarker k_CharacterLookupMarker = new ProfilerMarker("TMP Lookup Character & Glyph Data");
-        private static ProfilerMarker k_HandleGPOSFeaturesMarker = new ProfilerMarker("TMP Handle GPOS Features");
-        private static ProfilerMarker k_CalculateVerticesPositionMarker = new ProfilerMarker("TMP Calculate Vertices Position");
-        private static ProfilerMarker k_ComputeTextMetricsMarker = new ProfilerMarker("TMP Compute Text Metrics");
-        private static ProfilerMarker k_HandleVisibleCharacterMarker = new ProfilerMarker("TMP Handle Visible Character");
-        private static ProfilerMarker k_HandleWhiteSpacesMarker = new ProfilerMarker("TMP Handle White Space & Control Character");
-        private static ProfilerMarker k_HandleHorizontalLineBreakingMarker = new ProfilerMarker("TMP Handle Horizontal Line Breaking");
-        private static ProfilerMarker k_HandleVerticalLineBreakingMarker = new ProfilerMarker("TMP Handle Vertical Line Breaking");
-        private static ProfilerMarker k_SaveGlyphVertexDataMarker = new ProfilerMarker("TMP Save Glyph Vertex Data");
-        private static ProfilerMarker k_ComputeCharacterAdvanceMarker = new ProfilerMarker("TMP Compute Character Advance");
-        private static ProfilerMarker k_HandleCarriageReturnMarker = new ProfilerMarker("TMP Handle Carriage Return");
-        private static ProfilerMarker k_HandleLineTerminationMarker = new ProfilerMarker("TMP Handle Line Termination");
-        private static ProfilerMarker k_SavePageInfoMarker = new ProfilerMarker("TMP Save Page Info");
-        private static ProfilerMarker k_SaveTextExtentMarker = new ProfilerMarker("TMP Save Text Extent");
-        private static ProfilerMarker k_SaveProcessingStatesMarker = new ProfilerMarker("TMP Save Processing States");
-        private static ProfilerMarker k_GenerateTextPhaseIIMarker = new ProfilerMarker("TMP GenerateText - Phase II");
-        private static ProfilerMarker k_GenerateTextPhaseIIIMarker = new ProfilerMarker("TMP GenerateText - Phase III");
+        private static readonly ProfilerMarker k_GenerateTextMarker = new ProfilerMarker("TMP.GenerateText");
+        private static readonly ProfilerMarker k_SetArraySizesMarker = new ProfilerMarker("TMP.SetArraySizes");
+        private static readonly ProfilerMarker k_GenerateTextPhaseIMarker = new ProfilerMarker("TMP GenerateText - Phase I");
+        private static readonly ProfilerMarker k_ParseMarkupTextMarker = new ProfilerMarker("TMP Parse Markup Text");
+        private static readonly ProfilerMarker k_CharacterLookupMarker = new ProfilerMarker("TMP Lookup Character & Glyph Data");
+        private static readonly ProfilerMarker k_HandleGPOSFeaturesMarker = new ProfilerMarker("TMP Handle GPOS Features");
+        private static readonly ProfilerMarker k_CalculateVerticesPositionMarker = new ProfilerMarker("TMP Calculate Vertices Position");
+        private static readonly ProfilerMarker k_ComputeTextMetricsMarker = new ProfilerMarker("TMP Compute Text Metrics");
+        private static readonly ProfilerMarker k_HandleVisibleCharacterMarker = new ProfilerMarker("TMP Handle Visible Character");
+        private static readonly ProfilerMarker k_HandleWhiteSpacesMarker = new ProfilerMarker("TMP Handle White Space & Control Character");
+        private static readonly ProfilerMarker k_HandleHorizontalLineBreakingMarker = new ProfilerMarker("TMP Handle Horizontal Line Breaking");
+        private static readonly ProfilerMarker k_HandleVerticalLineBreakingMarker = new ProfilerMarker("TMP Handle Vertical Line Breaking");
+        private static readonly ProfilerMarker k_SaveGlyphVertexDataMarker = new ProfilerMarker("TMP Save Glyph Vertex Data");
+        private static readonly ProfilerMarker k_ComputeCharacterAdvanceMarker = new ProfilerMarker("TMP Compute Character Advance");
+        private static readonly ProfilerMarker k_HandleCarriageReturnMarker = new ProfilerMarker("TMP Handle Carriage Return");
+        private static readonly ProfilerMarker k_HandleLineTerminationMarker = new ProfilerMarker("TMP Handle Line Termination");
+        private static readonly ProfilerMarker k_SavePageInfoMarker = new ProfilerMarker("TMP Save Page Info");
+        private static readonly ProfilerMarker k_SaveTextExtentMarker = new ProfilerMarker("TMP Save Text Extent");
+        private static readonly ProfilerMarker k_SaveProcessingStatesMarker = new ProfilerMarker("TMP Save Processing States");
+        private static readonly ProfilerMarker k_GenerateTextPhaseIIMarker = new ProfilerMarker("TMP GenerateText - Phase II");
+        private static readonly ProfilerMarker k_GenerateTextPhaseIIIMarker = new ProfilerMarker("TMP GenerateText - Phase III");
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -833,9 +817,7 @@ namespace TMPro
             {
                 m_mesh = new Mesh();
                 m_mesh.hideFlags = HideFlags.HideAndDontSave;
-                #if DEVELOPMENT_BUILD || UNITY_EDITOR
                 m_mesh.name = "TextMeshPro UI Mesh";
-                #endif
                 // Create new TextInfo for the text object.
                 m_textInfo = new TMP_TextInfo(this);
             }
@@ -1085,6 +1067,8 @@ namespace TMPro
         {
             //Debug.Log("***** OnValidate() ***** Frame:" + Time.frameCount); // ID " + GetEntityId()); // New Material [" + m_sharedMaterial.name + "] with ID " + m_sharedMaterial.GetEntityId() + ". Base Material is [" + m_baseMaterial.name + "] with ID " + m_baseMaterial.GetEntityId() + ". Previous Base Material is [" + (m_lastBaseMaterial == null ? "Null" : m_lastBaseMaterial.name) + "].");
 
+            base.OnValidate();
+
             if (m_isAwake == false)
                 return;
 
@@ -1157,8 +1141,6 @@ namespace TMPro
         void ON_MATERIAL_PROPERTY_CHANGED(bool isChanged, Material mat)
         {
             //Debug.Log("ON_MATERIAL_PROPERTY_CHANGED event received."); // Targeted Material is: " + mat.name + "  m_sharedMaterial: " + m_sharedMaterial.name + " with ID:" + m_sharedMaterial.GetEntityId() + "  m_renderer.sharedMaterial: " + m_canvasRenderer.GetMaterial() + "  Masking Material:" + m_MaskMaterial.GetEntityId());
-
-            ShaderUtilities.GetShaderPropertyIDs(); // Initialize ShaderUtilities and get shader property IDs.
 
             EntityId materialID = mat.GetEntityId();
             EntityId sharedMaterialID = m_sharedMaterial.GetEntityId();
@@ -1330,8 +1312,6 @@ namespace TMPro
             //Debug.Log("***** LoadFontAsset() *****"); //TextMeshPro LoadFontAsset() has been called.");
             // Current Font Asset is " + (font != null ? font.name: "Null") );
 
-            ShaderUtilities.GetShaderPropertyIDs(); // Initialize & Get shader property IDs.
-
             if (ReplaceFont != null)
             {
                 TMP_FontAsset result = ReplaceFont(this);
@@ -1344,7 +1324,6 @@ namespace TMPro
             {
                 UncheckedReplacements.Add(this);
             }
-
             if (m_fontAsset == null)
             {
                 if (TMP_Settings.defaultFontAsset != null)
@@ -1404,7 +1383,7 @@ namespace TMPro
         private Canvas GetCanvas()
         {
             Canvas canvas = null;
-            var list = TMP_ListPool<Canvas>.Get();
+            var list = ListPool<Canvas>.Get();
 
             gameObject.GetComponentsInParent(false, list);
             if (list.Count > 0)
@@ -1420,7 +1399,7 @@ namespace TMPro
                 }
             }
 
-            TMP_ListPool<Canvas>.Release(list);
+            ListPool<Canvas>.Release(list);
 
             return canvas;
         }
@@ -1561,9 +1540,6 @@ namespace TMPro
                 //if (mat == null || (m_overflowMode == TextOverflowModes.ScrollRect && m_isScrollRegionSet))
                 //    return;
 
-                if (!ShaderUtilities.isInitialized)
-                    ShaderUtilities.GetShaderPropertyIDs();
-
                 //Debug.Log("Setting Mask for the first time.");
 
                 m_isScrollRegionSet = true;
@@ -1596,9 +1572,6 @@ namespace TMPro
         // Function called internally when a new material is assigned via the fontMaterial property.
         protected override Material GetMaterial(Material mat)
         {
-            // Get Shader PropertyIDs if they haven't been cached already.
-            ShaderUtilities.GetShaderPropertyIDs();
-
             // Check in case Object is disabled. If so, we don't have a valid reference to the Renderer.
             // This can occur when the Duplicate Material Context menu is used on an inactive object.
             //if (m_canvasRenderer == null)
@@ -1620,10 +1593,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        /// Method returning instances of the materials used by the text object.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override Material[] GetMaterials(Material[] mats)
         {
             int materialCount = m_textInfo.materialCount;
@@ -1664,10 +1634,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        /// Method returning an array containing the materials used by the text object.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override Material[] GetSharedMaterials()
         {
             int materialCount = m_textInfo.materialCount;
@@ -2297,11 +2264,11 @@ namespace TMPro
                 if (!char.IsWhiteSpace((char)unicode) && unicode != 0x200B)
                 {
                     // Limit the mesh of the main text object to 65535 vertices and use sub objects for the overflow.
-                    if (m_materialReferences[m_currentMaterialIndex].referenceCount < 16383)
+                    if (m_materialReferences[m_currentMaterialIndex].referenceCount < TMP_Math.MAX_QUADS_PER_MESH)
                         m_materialReferences[m_currentMaterialIndex].referenceCount += 1;
                     else if (isUsingFallbackOrAlternativeTypeface)
                     {
-                        if (materialIndexPairs.TryGetValue(m_currentMaterialIndex, out int prev_fallbackMaterialIndex) && m_materialReferences[prev_fallbackMaterialIndex].referenceCount < 16383)
+                        if (materialIndexPairs.TryGetValue(m_currentMaterialIndex, out int prev_fallbackMaterialIndex) && m_materialReferences[prev_fallbackMaterialIndex].referenceCount < TMP_Math.MAX_QUADS_PER_MESH)
                         {
                             m_currentMaterialIndex = prev_fallbackMaterialIndex;
                         }
@@ -2475,8 +2442,9 @@ namespace TMPro
         }
 
 
+        /// <inheritdoc/>
         /// <summary>
-        ///
+        /// Called when animation properties have been applied; marks the text as changed.
         /// </summary>
         protected override void OnDidApplyAnimationProperties()
         {
@@ -2930,11 +2898,34 @@ namespace TMPro
                             m_textInfo.characterInfo[m_characterCount].textElement = m_Ellipsis.character;
                             m_textInfo.characterInfo[m_characterCount].elementType = TMP_TextElementType.Character;
                             m_textInfo.characterInfo[m_characterCount].fontAsset = m_Ellipsis.fontAsset;
-                            m_textInfo.characterInfo[m_characterCount].material = m_Ellipsis.material;
-                            m_textInfo.characterInfo[m_characterCount].materialReferenceIndex = m_Ellipsis.materialIndex;
+                            int ellipsisMaterialIndex = m_Ellipsis.materialIndex;
 
-                            // Need to increase reference count in the event the primary mesh has no characters.
-                            m_materialReferences[m_Underline.materialIndex].referenceCount += 1;
+                            // UUM-134477: If the ellipsis material's submesh is at the MAX_QUADS_PER_MESH quad cap,
+                            // walk to a submesh that uses the ellipsis font's own atlas AND has room.
+                            // Bound on the logical material count (m_textInfo.materialCount),
+                            // not m_materialReferences.Length: that array is statically over-allocated and never shrunk,
+                            // so its length exceeds the current text's material count and trailing slots hold stale data.
+                            while (ellipsisMaterialIndex < m_textInfo.materialCount - 1 &&
+                                (m_materialReferences[ellipsisMaterialIndex].referenceCount >= TMP_Math.MAX_QUADS_PER_MESH ||
+                                m_materialReferences[ellipsisMaterialIndex].fontAsset != m_Ellipsis.fontAsset ||
+                                m_materialReferences[ellipsisMaterialIndex].spriteAsset != null))
+                                ++ellipsisMaterialIndex;
+
+                            // Guard against the case where MAX_QUADS_PER_MESH characters + trailing whitespace fill the primary mesh, leaving no room for the ellipsis character
+                            // In that case, the ellipsis character will not be rendered.
+                            if (m_materialReferences[ellipsisMaterialIndex].referenceCount < TMP_Math.MAX_QUADS_PER_MESH &&
+                                m_materialReferences[ellipsisMaterialIndex].fontAsset == m_Ellipsis.fontAsset &&
+                                m_materialReferences[ellipsisMaterialIndex].spriteAsset == null)
+                            {
+                                m_textInfo.characterInfo[m_characterCount].material = m_materialReferences[ellipsisMaterialIndex].material;
+                                m_textInfo.characterInfo[m_characterCount].materialReferenceIndex = ellipsisMaterialIndex;
+                                // Need to increase reference count in the event the primary mesh has no characters.
+                                ++m_materialReferences[ellipsisMaterialIndex].referenceCount;
+                            } else {
+                                // fallback to end of text character if we can't find available slot for ellipsis character.
+                                charCode = 0x03;
+                                m_textInfo.characterInfo[m_characterCount].textElement = m_currentFontAsset.characterLookupTable[charCode];
+                            }
 
                             // Indicates the source parsing data has been modified.
                             m_isTextTruncated = true;
@@ -5587,10 +5578,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        /// Method to return the local corners of the Text Container or RectTransform.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override Vector3[] GetTextContainerLocalCorners()
         {
             if (m_rectTransform == null) m_rectTransform = this.rectTransform;
@@ -5601,10 +5589,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        /// Method to Enable or Disable child SubMesh objects.
-        /// </summary>
-        /// <param name="state"></param>
+        /// <inheritdoc/>
         protected override void SetActiveSubMeshes(bool state)
         {
             for (int i = 1; i < m_subTextObjects.Length && m_subTextObjects[i] != null; i++)
@@ -5625,10 +5610,7 @@ namespace TMPro
         }
 
 
-        /// <summary>
-        ///  Method returning the compound bounds of the text object and child sub objects.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override Bounds GetCompoundBounds()
         {
             Bounds mainBounds = m_mesh.bounds;

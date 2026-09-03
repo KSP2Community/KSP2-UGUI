@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.TextCore;
@@ -18,11 +18,19 @@ namespace TMPro
     //    RelativeToCurrent   = 0x2,
     //}
 
-    [System.Serializable][ExcludeFromPresetAttribute]
+    [System.Serializable][ExcludeFromPreset]
     [HelpURL("https://docs.unity3d.com/Packages/com.unity.ugui@2.0/manual/TextMeshPro/Settings.html")]
     public class TMP_Settings : ScriptableObject
     {
         private static TMP_Settings s_Instance;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = null;
+        }
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -41,7 +49,7 @@ namespace TMPro
         [SerializeField]
         internal string assetVersion;
 
-        internal static string s_CurrentAssetVersion = "2";
+        internal const string s_CurrentAssetVersion = "2";
 
         internal void SetAssetVersion()
         {
@@ -407,7 +415,7 @@ namespace TMPro
         private TextAsset m_followingCharacters;
 
         /// <summary>
-        ///
+        /// Table of leading and following characters used for line-breaking rules (e.g. for CJK).
         /// </summary>
         public static LineBreakingTable linebreakingRules
         {
@@ -500,7 +508,7 @@ namespace TMPro
         /// <summary>
         /// Static Function to load the TMP Settings file.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The loaded <see cref="TMP_Settings"/> instance, or null if the asset is not present in a Resources folder.</returns>
         public static TMP_Settings LoadDefaultSettings()
         {
             if (s_Instance == null)
@@ -516,9 +524,9 @@ namespace TMPro
 
 
         /// <summary>
-        /// Returns the Sprite Asset defined in the TMP Settings file.
+        /// Returns the singleton TMP Settings instance.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The active <see cref="TMP_Settings"/> asset, or null if it could not be loaded from Resources.</returns>
         public static TMP_Settings GetSettings()
         {
             if (TMP_Settings.instance == null) return null;
@@ -530,7 +538,7 @@ namespace TMPro
         /// <summary>
         /// Returns the Font Asset defined in the TMP Settings file.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The configured <see cref="TMP_FontAsset"/>, or null if TMP Settings failed to load.</returns>
         public static TMP_FontAsset GetFontAsset()
         {
             if (TMP_Settings.instance == null) return null;
@@ -542,7 +550,7 @@ namespace TMPro
         /// <summary>
         /// Returns the Sprite Asset defined in the TMP Settings file.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The configured <see cref="TMP_SpriteAsset"/>, or null if TMP Settings failed to load.</returns>
         public static TMP_SpriteAsset GetSpriteAsset()
         {
             if (TMP_Settings.instance == null) return null;
@@ -554,7 +562,7 @@ namespace TMPro
         /// <summary>
         /// Returns the Style Sheet defined in the TMP Settings file.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The configured <see cref="TMP_StyleSheet"/>, or null if TMP Settings failed to load.</returns>
         public static TMP_StyleSheet GetStyleSheet()
         {
             if (TMP_Settings.instance == null) return null;

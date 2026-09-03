@@ -1,8 +1,7 @@
 {
   "name": "com.unity.ugui",
   "displayName": "uGUI",
-  "version": "2.5.0",
-  "unity": "6000.5",
+  "version": "2.6.0",
   "keywords": [
     "UI",
     "ugui",
@@ -22,5 +21,5 @@
     "com.unity.modules.physics2d": "1.0.0",
     "com.unity.modules.physics": "1.0.0"
   },
-  "_fingerprint": "fb409ffddf529e605c494672b97789462652bca5"
+  "_fingerprint": "23caec89ae2780ae2aa9b14f95a19c03e3dcdf9e"
 }

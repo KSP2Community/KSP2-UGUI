@@ -45,6 +45,19 @@ namespace TMPro
     {
         private static TMP_EditorResourceManager s_Instance;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            if (s_Instance != null)
+            {
+                Canvas.willRenderCanvases -= s_Instance.OnPreRenderCanvases;
+                Canvas.willRenderCanvases += s_Instance.OnPreRenderCanvases;
+                // s_Instance = null;  // Shoudn't need to be reset as this is an Editor singleton.
+            }
+        }
+#endif
+
         private readonly List<Object> m_ObjectUpdateQueue = new List<Object>();
         private HashSet<EntityId> m_ObjectUpdateQueueLookup = new HashSet<EntityId>();
 
@@ -53,6 +66,8 @@ namespace TMPro
 
         private readonly List<TMP_FontAsset> m_FontAssetDefinitionRefreshQueue = new List<TMP_FontAsset>();
         private HashSet<EntityId> m_FontAssetDefinitionRefreshQueueLookup = new HashSet<EntityId>();
+
+        private bool m_PostRenderUpdatesScheduled;
 
         /// <summary>
         /// Get a singleton instance of the manager.
@@ -105,14 +120,30 @@ namespace TMPro
         #if UNITY_2023_3_OR_NEWER
         void OnEndOfFrame(ScriptableRenderContext renderContext, List<Camera> cameras)
         {
-            DoPostRenderUpdates();
+            ScheduleDoPostRenderUpdates();
         }
         #else
         void OnEndOfFrame(ScriptableRenderContext renderContext, Camera[] cameras)
         {
-            DoPostRenderUpdates();
+            ScheduleDoPostRenderUpdates();
         }
         #endif
+
+        void ScheduleDoPostRenderUpdates()
+        {
+            // Defers past this render callback so ImportAsset() never runs nested inside a render callstack.
+            if (m_PostRenderUpdatesScheduled)
+                return;
+
+            m_PostRenderUpdatesScheduled = true;
+            EditorApplication.delayCall += DeferredDoPostRenderUpdates;
+        }
+
+        void DeferredDoPostRenderUpdates()
+        {
+            m_PostRenderUpdatesScheduled = false;
+            DoPostRenderUpdates();
+        }
 
         /// <summary>
         /// Register resource for re-import.
@@ -225,24 +256,12 @@ namespace TMPro
             // Handle objects that need updating
             int objUpdateCount = m_ObjectUpdateQueue.Count;
 
-            for (int i = 0; i < objUpdateCount; i++)
+            if (objUpdateCount > 0)
             {
                 EditorUtilities.TMP_PropertyDrawerUtilities.s_RefreshGlyphProxyLookup = true;
                 #if TEXTCORE_FONT_ENGINE_1_5_OR_NEWER
                 UnityEditor.TextCore.Text.TextCorePropertyDrawerUtilities.s_RefreshGlyphProxyLookup = true;
                 #endif
-
-                Object obj = m_ObjectUpdateQueue[i];
-                if (obj != null)
-                {
-                    //EditorUtility.SetDirty(obj);
-                }
-            }
-
-            if (objUpdateCount > 0)
-            {
-                //Debug.Log("Saving assets");
-                //AssetDatabase.SaveAssets();
 
                 m_ObjectUpdateQueue.Clear();
                 m_ObjectUpdateQueueLookup.Clear();

@@ -309,6 +309,14 @@ namespace UnityEngine.UIElements
         private Event m_Event = new Event();
         private static EventModifiers s_Modifiers = EventModifiers.None;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Modifiers = EventModifiers.None;
+        }
+#endif
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
         {
@@ -388,12 +396,20 @@ namespace UnityEngine.UIElements
 
         private void SendKeyDownEvent(Event e, IEventHandler target)
         {
-            m_Panel.SendKeyboardEvent(
-                isKeyDown: true,
-                e.character,
-                e.keyCode,
-                s_Modifiers,
-                target);
+            // Key event with no key and null char signals IME state may have changed; send IME event instead of key down.
+            if (e.keyCode == KeyCode.None && e.character == '\0')
+            {
+                m_Panel.SendIMEEvent(UnityEngine.Input.compositionString, target);
+            }
+            else
+            {
+                m_Panel.SendKeyboardEvent(
+                    isKeyDown: true,
+                    e.character,
+                    e.keyCode,
+                    s_Modifiers,
+                    target);
+            }
 
             // Don't call e.Use() because DefaultEventSystem doesn't either
         }

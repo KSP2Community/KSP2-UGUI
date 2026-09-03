@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine.UI.Collections;
 
 namespace UnityEngine.UI
@@ -76,6 +75,18 @@ namespace UnityEngine.UI
     {
         private static CanvasUpdateRegistry s_Instance;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            if (s_Instance != null)
+            {
+                Canvas.willRenderCanvases -= s_Instance.PerformUpdate;
+                s_Instance = default;
+            }
+        }
+#endif
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
         {
@@ -86,7 +97,7 @@ namespace UnityEngine.UI
         private bool m_PerformingGraphicUpdate;
 
         // This list matches the CanvasUpdate enum above. Keep in sync
-        private string[] m_CanvasUpdateProfilerStrings = new string[] { "CanvasUpdate.Prelayout", "CanvasUpdate.Layout", "CanvasUpdate.PostLayout", "CanvasUpdate.PreRender", "CanvasUpdate.LatePreRender" };
+        private readonly string[] m_CanvasUpdateProfilerStrings = new string[] { "CanvasUpdate.Prelayout", "CanvasUpdate.Layout", "CanvasUpdate.PostLayout", "CanvasUpdate.PreRender", "CanvasUpdate.LatePreRender" };
         private const string m_CullingUpdateProfilerString = "ClipperRegistry.Cull";
 
         private readonly IndexedSet<ICanvasElement> m_LayoutRebuildQueue = new IndexedSet<ICanvasElement>();
@@ -332,9 +343,25 @@ namespace UnityEngine.UI
         }
 
         /// <summary>
-        /// Remove the given element from both the graphic and the layout rebuild lists.
+        /// Removes the given element from both the graphic and the layout rebuild lists.
         /// </summary>
-        /// <param name="element"></param>
+        /// <remarks>
+        /// Call this when an <see cref="ICanvasElement"/> (for example,
+        /// <see cref="RectTransform"/>, <see cref="Graphic"/>) no longer receives
+        /// layout or graphic rebuild callbacks. The element is removed from the
+        /// internal queues so it doesn't update on the next canvas update.
+        /// </remarks>
+        /// <param name="element">The canvas element to remove from the rebuild lists.</param>
+        /// <example>
+        /// <para>Unregister from canvas rebuild when this component is disabled. The
+        /// element no longer receives layout or graphic rebuild callbacks.</para>
+        /// <code><![CDATA[
+        /// void OnDisable()
+        /// {
+        ///     CanvasUpdateRegistry.UnRegisterCanvasElementForRebuild(this);
+        /// }
+        /// ]]></code>
+        /// </example>
         public static void UnRegisterCanvasElementForRebuild(ICanvasElement element)
         {
             instance.InternalUnRegisterCanvasElementForLayoutRebuild(element);
@@ -342,9 +369,27 @@ namespace UnityEngine.UI
         }
 
         /// <summary>
-        /// Disable the given element from both the graphic and the layout rebuild lists.
+        /// Disables the given element from both the graphic and the layout rebuild lists.
         /// </summary>
-        /// <param name="element"></param>
+        /// <remarks>
+        /// Disables the element so it isn't rebuilt on the next canvas update while
+        /// still keeping it in the registry. Use this when temporarily hiding or
+        /// disabling an element without unregistering it (for example, for object
+        /// pooling).
+        /// </remarks>
+        /// <param name="element">The canvas element to disable for rebuild.</param>
+        /// <example>
+        /// <para>Temporarily hide the element while keeping it in the registry so it
+        /// isn't rebuilt until re-enabled. Use for object pooling or conditional
+        /// visibility.</para>
+        /// <code><![CDATA[
+        /// void HideTemporarily()
+        /// {
+        ///     gameObject.SetActive(false);
+        ///     CanvasUpdateRegistry.DisableCanvasElementForRebuild(GetComponent&lt;RectTransform&gt;());
+        /// }
+        /// ]]></code>
+        /// </example>
         public static void DisableCanvasElementForRebuild(ICanvasElement element)
         {
             instance.InternalDisableCanvasElementForLayoutRebuild(element);
