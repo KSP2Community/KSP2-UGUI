@@ -146,6 +146,16 @@ namespace UnityEngine.UI
                 totalMax -= spacing;
                 totalPreferred -= spacing;
             }
+
+            // On the main axis totalMax is a sum seeded with the padding. A group whose children
+            // are all inactive or set to ignore layout never enters the loop above, so that seed
+            // survives as a hard maximum equal to the padding, which then caps every ancestor
+            // through the Mathf.Min on the other axis. An empty group constrains nothing.
+            if (rectChildren.Count == 0)
+            {
+                totalMax = LayoutUtility.DefaultMaxSize;
+            }
+
             totalPreferred = Mathf.Clamp(totalPreferred, totalMin, totalMax);
             SetLayoutInputForAxis(totalMin, totalMax, totalPreferred, totalFlexible, axis);
         }
@@ -238,7 +248,10 @@ namespace UnityEngine.UI
             if (!controlSize)
             {
                 min = child.sizeDelta[axis];
-                max = min;
+                // The group is not sizing this child, so the child's current size is what it will
+                // keep. That is not an upper bound on the group, and treating it as one lets the
+                // narrowest child cap the whole group.
+                max = LayoutUtility.DefaultMaxSize;
                 preferred = min;
                 flexible = 0;
             }
