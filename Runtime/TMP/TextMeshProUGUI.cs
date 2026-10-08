@@ -31,10 +31,20 @@ namespace TMPro
     {
         private static readonly Dictionary<string, Material> s_ReduxMaterialReplacements = new();
         private static readonly HashSet<EntityId> s_ReduxInitializedFonts = new();
+        private static readonly Dictionary<TMP_FontAsset, Material> s_ReduxOriginalFontMaterials = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetReduxCompatibilityState()
         {
+            // In the editor a font asset outlives the play session, while the replacement material and the
+            // bundled shader it uses do not. Put the original materials back so the next session starts from them.
+            foreach (KeyValuePair<TMP_FontAsset, Material> pair in s_ReduxOriginalFontMaterials)
+            {
+                if (pair.Key != null)
+                    pair.Key.material = pair.Value;
+            }
+
+            s_ReduxOriginalFontMaterials.Clear();
             s_ReduxMaterialReplacements.Clear();
             s_ReduxInitializedFonts.Clear();
         }
@@ -917,8 +927,11 @@ namespace TMPro
             Material fontMaterial = CreateReduxCompatibleMaterial(
                 fontAsset.material != null ? fontAsset.material : inheritedMaterial,
                 fontAsset);
-            if (fontMaterial != null)
+            if (fontMaterial != null && fontMaterial != fontAsset.material)
+            {
+                s_ReduxOriginalFontMaterials.TryAdd(fontAsset, fontAsset.material);
                 fontAsset.material = fontMaterial;
+            }
 
             if (s_ReduxInitializedFonts.Add(fontAsset.GetEntityId()))
             {
