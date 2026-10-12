@@ -7,3 +7,6 @@
 [assembly: InternalsVisibleTo("Unity.FontEngine.Tests")]
 [assembly: InternalsVisibleTo("Unity.TextCore.Editor")]
 [assembly: InternalsVisibleTo("Unity.TextMeshPro.Editor")]
+
+// Redux's EditMode suite tests the font compatibility materials.
+[assembly: InternalsVisibleTo("Assembly-CSharp-Editor")]

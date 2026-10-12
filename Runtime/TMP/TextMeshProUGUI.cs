@@ -957,7 +957,10 @@ namespace TMPro
         }
 
 
-        private static Material CreateReduxCompatibleMaterial(Material source, TMP_FontAsset fontAsset)
+        // A material inherited from a stock font samples the stock atlas. In an install whose bundles were converted to
+        // the URP shaders the stock material already has the shader Shader.Find returns, so the shader alone cannot tell
+        // whether the material fits the font, and a replacement font drawn with it showed garbled glyphs.
+        internal static Material CreateReduxCompatibleMaterial(Material source, TMP_FontAsset fontAsset)
         {
             if (source == null || source.shader == null)
                 return null;
@@ -965,7 +968,11 @@ namespace TMPro
             Shader target = Shader.Find(source.shader.name);
             if (target == null)
                 return null;
-            if (target == source.shader)
+
+            Texture2D atlas = fontAsset.atlasTexture;
+            bool samplesFontAtlas = atlas == null || !source.HasProperty(ShaderUtilities.ID_MainTex) ||
+                source.GetTexture(ShaderUtilities.ID_MainTex) == atlas;
+            if (target == source.shader && samplesFontAtlas)
                 return source;
 
             string key = source.GetEntityId() + ":" + fontAsset.GetEntityId();
@@ -978,7 +985,6 @@ namespace TMPro
                     hideFlags = HideFlags.HideAndDontSave
                 };
 
-                Texture2D atlas = fontAsset.atlasTexture;
                 if (atlas != null && replacement.HasProperty(ShaderUtilities.ID_MainTex))
                     replacement.SetTexture(ShaderUtilities.ID_MainTex, atlas);
 
