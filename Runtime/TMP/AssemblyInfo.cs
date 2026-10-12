@@ -8,5 +8,7 @@
 [assembly: InternalsVisibleTo("Unity.TextCore.Editor")]
 [assembly: InternalsVisibleTo("Unity.TextMeshPro.Editor")]
 
-// Redux's EditMode suite tests the font compatibility materials.
+// Redux's EditMode suite tests the font compatibility materials. It compiles as Assembly-CSharp-Editor on Redux
+// develop and as Ksp2Redux.Editor.Tests once the game has its own assembly definitions.
 [assembly: InternalsVisibleTo("Assembly-CSharp-Editor")]
+[assembly: InternalsVisibleTo("Ksp2Redux.Editor.Tests")]
