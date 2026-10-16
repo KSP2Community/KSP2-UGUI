@@ -986,7 +986,21 @@ namespace TMPro
                 };
 
                 if (atlas != null && replacement.HasProperty(ShaderUtilities.ID_MainTex))
+                {
                     replacement.SetTexture(ShaderUtilities.ID_MainTex, atlas);
+
+                    // The copied values describe the source material's atlas. Redux fonts pad their atlases more than
+                    // the stock fonts do, and an SDF drawn with the stock gradient scale came out blurred and bold.
+                    replacement.SetFloat(ShaderUtilities.ID_TextureWidth, atlas.width);
+                    replacement.SetFloat(ShaderUtilities.ID_TextureHeight, atlas.height);
+                    bool isBitmap = ((GlyphRasterModes)fontAsset.atlasRenderMode & GlyphRasterModes.RASTER_MODE_BITMAP) ==
+                        GlyphRasterModes.RASTER_MODE_BITMAP;
+                    if (!isBitmap && replacement.HasProperty(ShaderUtilities.ID_GradientScale))
+                    {
+                        replacement.SetFloat(ShaderUtilities.ID_GradientScale, fontAsset.atlasPadding + 1);
+                        ShaderUtilities.UpdateShaderRatios(replacement);
+                    }
+                }
 
                 s_ReduxMaterialReplacements[key] = replacement;
             }
